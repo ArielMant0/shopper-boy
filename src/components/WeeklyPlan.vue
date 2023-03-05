@@ -61,19 +61,21 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { DateTime } from 'luxon';
+import useLoader from '@/use/loader'
 
 export default {
 
     setup() {
 
         const today = DateTime.now();
+        const loader = useLoader();
         const data = reactive([]);
         for (let i = -1; i < 6; ++i) {
             data.push({
                 day: today.plus({ day: i }),
-                recipe: i >= 0 && i < 2 ? "Chilli con Quinoa" : null,
+                recipe: null,
                 img: "https://cdn.vuetifyjs.com/images/parallax/material.jpg"
             })
         }
@@ -89,6 +91,7 @@ export default {
             "Veganer Kartoffelsalat",
             "Gnocchi mit Gemüse",
             "Schnupfnudeln mit Gemüse",
+            "Brötchen",
         ];
         const recipes = computed(() => {
             if (search.value.length === 0) {
@@ -126,9 +129,28 @@ export default {
             const day = data.find(d => isDay(d.day, sourceDay.value));
             if (day) {
                 day.recipe = recipe.value;
+                loader.post("daily-plan", {
+                    date: day.day.toISODate(),
+                    recipe: recipe.value,
+                    name: recipe.value,
+                })
                 recipe.value = "";
             }
         }
+
+        async function init() {
+            const plan = await loader.get("weekly-plan");
+            plan.forEach(d => {
+                const day = DateTime.fromRFC2822(d.date);
+                const item = data.find(dd => isDay(dd.day, day))
+                if (item) {
+                    item.recipe = d.recipe;
+                    item.name = d.name;
+                }
+            })
+        }
+
+        onMounted(init);
 
         return {
             data,

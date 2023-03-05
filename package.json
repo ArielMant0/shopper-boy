@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@mdi/font": "7.0.96",
+    "axios": "^1.3.4",
     "core-js": "^3.8.3",
     "luxon": "^3.3.0",
     "pinia": "^2.0.23",
