@@ -7,13 +7,13 @@
         <v-spacer/>
         <v-btn @click="showAll = !showAll"
             :icon="showAll ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
-            variant="text"/>
+            variant="plain"/>
         <v-btn @click="dialog = true"
             icon="mdi-playlist-plus"
-            variant="text"/>
+            variant="plain"/>
         <v-btn @click="addReceipt"
             icon="mdi-receipt-text-plus-outline"
-            variant="text"/>
+            variant="plain"/>
     </v-toolbar>
     <v-list min-width="500">
         <template v-for="(array, cat) in items" :key="cat">
@@ -52,11 +52,11 @@
                     <v-btn @click="toggleCartStatus(item)"
                         :color="item.cart ? 'error' : 'success'"
                         :icon="item.cart ? 'mdi-cart-remove' : 'mdi-cart-check'"
-                        variant="text"/>
+                        variant="plain"/>
                     <v-btn @click="removeItem(item.name)"
                         color="error"
                         icon="mdi-playlist-remove"
-                        variant="text"/>
+                        variant="plain"/>
                 </template>
             </v-list-item>
         </template>
