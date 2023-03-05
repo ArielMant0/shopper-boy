@@ -9,7 +9,6 @@ from dataclasses import dataclass
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + os.path.join(basedir, 'database.db')
 CORS(app)
@@ -32,36 +31,53 @@ class DailyMealPlan(db.Model):
 def weekly_plan():
     """
     Return the weekly meal plan for the 7
-    days around today (-1 to +5)
+    days around the given date (-1 to +5)
     """
-    today = datetime.date.today()
-    from_date = today + datetime.timedelta(days=-1)
-    to_date = today + datetime.timedelta(days=5)
+    date_str = request.args.get('date')
+    if date_str is None:
+        selected = datetime.date.today()
+    else:
+        selected = datetime.date.fromisoformat(date_str)
+
+    from_date = selected + datetime.timedelta(days=-1)
+    to_date = selected + datetime.timedelta(days=5)
 
     plan = db.session.execute(db.select(DailyMealPlan).where(DailyMealPlan.date >= from_date).where(DailyMealPlan.date <= to_date)).scalars()
     return jsonify([p.to_dict() for p in plan])
 
-@app.post("/daily-plan")
+@app.route("/daily-plan", methods=["GET", "POST"])
 def daily_plan():
     """
-    Set the meal plan for a specific day
+    Get or set the meal plan for a specific day
     """
-    data = json.loads(request.data)
-    print(data)
+    date_str = request.args.get('date', '')
+    if len(date_str) == 0:
+        return jsonify({ "error": "no date" })
 
-    date = datetime.date.fromisoformat(data["date"])
+    result = {}
 
-    plan = db.session.execute(db.select(DailyMealPlan).filter_by(date=date)).scalar()
-    if plan is not None:
-        plan.name = data["name"]
-        plan.recipe = data["recipe"]
+    if request.method == "POST":
+        date = datetime.date.fromisoformat(date_str)
+        name = request.args.get('name', '')
+        recipe = request.args.get('recipe', '')
+
+        plan = db.session.execute(db.select(DailyMealPlan).filter_by(date=date)).scalar()
+        if plan is not None:
+            plan.name = name
+            plan.recipe = recipe
+        else:
+            plan = DailyMealPlan(name=name, date=date, recipe=recipe)
+            db.session.add(plan)
+
+        db.session.commit()
     else:
-        plan = DailyMealPlan(name=data["name"], date=date, recipe=data["recipe"])
-        db.session.add(plan)
+        date = datetime.date.fromisoformat(date_str)
+        plan = db.session.execute(db.select(DailyMealPlan).filter_by(date=date)).scalar()
 
-    db.session.commit()
+    if plan is not None:
+        result = plan.to_dict()
 
-    return jsonify({ "success": True })
+    return jsonify(result)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)

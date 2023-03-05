@@ -1,14 +1,24 @@
 <template>
-    <div>
+    <div style="min-width: 250px;">
     <v-list rounded class="week">
-        <v-list-item v-for="item in data"
+
+        <v-list-item style="text-align: center;" density="compact">
+            <v-btn @click="prevDay"
+                icon="mdi-menu-up"
+                variant="text"
+                density="compact"/>
+        </v-list-item>
+        <v-divider></v-divider>
+
+        <v-list-item v-for="item in data.days"
+            :key="item.day.toISODate()"
             :title="item.recipe"
             :variant="isToday(item.day)?'tonal':'plain'">
 
             <template v-slot:prepend>
                 {{ item.day.toFormat("dd") }}.
                 <v-divider vertical thickness="2" class="bo-100 ml-3 mt-1 mb-1"></v-divider>
-                <v-avatar>{{ weekday(item.day, "short") }}</v-avatar>
+                <v-avatar>{{ item.day.weekdayShort }}</v-avatar>
             </template>
 
             <template v-slot:append>
@@ -18,6 +28,15 @@
             </template>
 
         </v-list-item>
+
+        <v-divider></v-divider>
+        <v-list-item style="text-align: center;" density="compact">
+            <v-btn @click="nextDay"
+                icon="mdi-menu-down"
+                variant="text"
+                density="compact"/>
+        </v-list-item>
+
     </v-list>
 
     <v-dialog v-model="dialog">
@@ -69,15 +88,25 @@ export default {
 
     setup() {
 
-        const today = DateTime.now();
         const loader = useLoader();
-        const data = reactive([]);
-        for (let i = -1; i < 6; ++i) {
-            data.push({
-                day: today.plus({ day: i }),
-                recipe: null,
-                img: "https://cdn.vuetifyjs.com/images/parallax/material.jpg"
-            })
+
+        const data = reactive({
+            selected: DateTime.now(),
+            days: []
+        });
+
+        fillData()
+
+        function fillData() {
+            const array = [];
+            for (let i = -1; i < 6; ++i) {
+                array.push({
+                    day: data.selected.plus({ day: i }),
+                    recipe: null,
+                    img: "https://cdn.vuetifyjs.com/images/parallax/material.jpg"
+                });
+            }
+            data.days = array;
         }
 
         const allRecipes = [
@@ -93,6 +122,7 @@ export default {
             "Schnupfnudeln mit Gemüse",
             "Brötchen",
         ];
+
         const recipes = computed(() => {
             if (search.value.length === 0) {
                 return allRecipes
@@ -105,9 +135,6 @@ export default {
         const recipe = ref("")
         const search = ref("");
 
-        function weekday(day, short=false) {
-            return short ? day.weekdayShort : day.weekdayLong;
-        }
         function isDay(day, target) {
             return day.day === target.day &&
                 day.month === target.month &&
@@ -126,7 +153,7 @@ export default {
         }
         function saveChanges() {
             dialog.value = false;
-            const day = data.find(d => isDay(d.day, sourceDay.value));
+            const day = data.days.find(d => isDay(d.day, sourceDay.value));
             if (day) {
                 day.recipe = recipe.value;
                 loader.post("daily-plan", {
@@ -138,16 +165,37 @@ export default {
             }
         }
 
-        async function init() {
-            const plan = await loader.get("weekly-plan");
+        async function loadDay(day) {
+            loader.get(`weekly-plan`, { date: day.toISODate() })
+                .then(plan => {
+                    data.selected = day;
+                    fillData();
+                    mergePlan(plan);
+                })
+        }
+
+        async function prevDay() {
+            loadDay(data.selected.plus({ day: -1 }))
+        }
+
+        async function nextDay() {
+            loadDay(data.selected.plus({ day: 1 }))
+        }
+
+        function mergePlan(plan) {
             plan.forEach(d => {
                 const day = DateTime.fromRFC2822(d.date);
-                const item = data.find(dd => isDay(dd.day, day))
+                const item = data.days.find(dd => isDay(dd.day, day))
                 if (item) {
                     item.recipe = d.recipe;
                     item.name = d.name;
                 }
             })
+        }
+
+        async function init() {
+            const plan = await loader.get("weekly-plan");
+            mergePlan(plan);
         }
 
         onMounted(init);
@@ -158,10 +206,11 @@ export default {
             search,
             recipe,
             recipes,
-            weekday,
             isToday,
             openDialog,
-            saveChanges
+            saveChanges,
+            prevDay,
+            nextDay
         }
     }
 }
