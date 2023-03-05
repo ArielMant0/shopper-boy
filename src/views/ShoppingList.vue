@@ -27,6 +27,6 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    max-width: 500px;
+    max-width: 80%;
 }
 </style>

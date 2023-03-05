@@ -3,7 +3,7 @@
     <v-tabs stacked align-tabs="center" density="compact">
       <v-tab to="/">
           <v-icon>mdi-currency-eur</v-icon>
-          Money
+          Bilanz
         </v-tab>
 
         <v-tab to="/list">

@@ -1,12 +1,14 @@
 <template>
     <div>
     <v-toolbar density="compact">
-        <v-toolbar-title>Est. Price: {{ price }} €</v-toolbar-title>
+        <v-toolbar-title>
+            Est. Price: <b>{{ priceEstimate.toFixed(2) }} €</b>
+        </v-toolbar-title>
         <v-spacer/>
         <v-btn @click="showAll = !showAll"
             :icon="showAll ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
             variant="text"/>
-        <v-btn @click="addItem"
+        <v-btn @click="dialog = true"
             icon="mdi-playlist-plus"
             variant="text"/>
         <v-btn @click="addReceipt"
@@ -14,11 +16,11 @@
             variant="text"/>
     </v-toolbar>
     <v-list min-width="500">
-        <template v-for="(items, cat) in itemsPerCat" :key="cat">
-            <v-list-subheader v-if="items.length > 0" inset>{{ cat }}</v-list-subheader>
+        <template v-for="(array, cat) in items" :key="cat">
+            <v-list-subheader v-if="array.length > 0" inset>{{ cat }}</v-list-subheader>
 
             <v-list-item
-                v-for="item in items"
+                v-for="item in array"
                 :key="item.name"
                 :title="item.name"
                 :class="'text-caption' + (item.cart ? ' item-in-cart' : '')"
@@ -59,6 +61,8 @@
             </v-list-item>
         </template>
     </v-list>
+
+    <ItemSelector :open="dialog" @close="dialog = false"/>
     </div>
 </template>
 
@@ -72,94 +76,52 @@
  *   category: ".."
  * }
  */
-import { ref, reactive, computed } from 'vue';
+import { ref, computed } from 'vue';
+import ItemSelector from '@/components/ItemSelector.vue';
+import { useAppStore } from '@/store/app';
+import { storeToRefs } from 'pinia';
 
 export default {
+    components: { ItemSelector },
     setup() {
+        const app = useAppStore();
+        const { units, priceEstimate } = storeToRefs(app);
+
+        const dialog = ref(false);
         const showAll = ref(true);
-        const items = reactive([
-            {
-                name: "Äpfel",
-                amount: "4",
-                unit: "Stk.",
-                priceEstimate: 2.42,
-                cart: true,
-                category: "Obst"
-            },{
-                name: "Birnen",
-                amount: "1",
-                unit: "Stk.",
-                cart: false,
-                priceEstimate: 0.99,
-                category: "Obst"
-            },{
-                name: "Zucchini",
-                amount: "2",
-                unit: "Stk.",
-                cart: false,
-                priceEstimate: 1.08,
-                category: "Gemüse"
-            },
-        ])
 
-        const units = ["Stk.", "g", "kg", "EL", "TL", "Msp"]
-        const categories = ["Obst", "Gemüse", "Milchprodukte", "Sonstiges"]
-
-        const itemsPerCat = computed(() => {
-            const obj = {};
-            categories.forEach(cat => {
-                obj[cat] = filterByCategory(cat);
-            })
-            return obj;
+        const items = computed(() => {
+            return showAll.value ?
+                app.itemsPerCategory :
+                app.itemsPerCategoryVisible
         })
-
-        const price = computed(() => {
-            return items.reduce((acc,d) => acc + d.priceEstimate, 0);
-        })
-
-        function filterByCategory(category) {
-            return items.filter(d => d.category === category &&
-                (showAll.value || !d.cart))
-        }
 
         function toggleCartStatus(item) {
             item.cart = !item.cart;
         }
         function removeItem(name) {
-            items.splice(items.indexOf(d => d.name === name), 1)
+            app.removeItemFromShoppingList(name);
         }
-
-        function addItem() {
-            items.push({
-                name: "Käse",
-                amount: "1",
-                priceEstimate: 2.29,
-                cart: false,
-                category: "Milchprodukte"
-            })
-        }
-
         // TODO
-        function addReceipt() {}
+        function addReceipt() { }
 
         return {
-            itemsPerCat,
-            price,
+            items,
+            priceEstimate,
+            dialog,
             showAll,
             units,
             toggleCartStatus,
             removeItem,
-            addItem,
             addReceipt
-        }
-    }
+        };
+    },
 }
 </script>
 
 <style scoped>
 .item-in-cart {
-    color: #666;
-    font-size: smaller;
+    color: #888;
 }
 </style>
 
