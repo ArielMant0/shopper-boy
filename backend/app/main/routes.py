@@ -1,33 +1,11 @@
-import os
-import json
 import datetime
-import sqlalchemy as sa
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from dataclasses import dataclass
+from flask import jsonify, request
 
-basedir = os.path.abspath(os.path.dirname(__file__))
+from app.main import bp
+from app.extensions import db
+from app.models.daily_meal_plan import DailyMealPlan
 
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + os.path.join(basedir, 'database.db')
-CORS(app)
-
-db = SQLAlchemy(app)
-
-@dataclass
-class DailyMealPlan(db.Model):
-    __tablename__ = "daily_meal_plan"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String(60), nullable=False)
-    date = sa.Column(sa.Date, nullable=False)
-    recipe = sa.Column(sa.String, nullable=False)
-
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
-
-@app.get("/weekly-plan")
+@bp.get("/weekly-plan")
 def weekly_plan():
     """
     Return the weekly meal plan for the 7
@@ -45,11 +23,12 @@ def weekly_plan():
     plan = db.session.execute(db.select(DailyMealPlan).where(DailyMealPlan.date >= from_date).where(DailyMealPlan.date <= to_date)).scalars()
     return jsonify([p.to_dict() for p in plan])
 
-@app.route("/daily-plan", methods=["GET", "POST"])
+@bp.route("/daily-plan", methods=["GET", "POST"])
 def daily_plan():
     """
     Get or set the meal plan for a specific day
     """
+
     date_str = request.args.get('date', '')
     if len(date_str) == 0:
         return jsonify({ "error": "no date" })
@@ -69,6 +48,8 @@ def daily_plan():
             plan = DailyMealPlan(name=name, date=date, recipe=recipe)
             db.session.add(plan)
 
+        print(name, recipe)
+
         db.session.commit()
     else:
         date = datetime.date.fromisoformat(date_str)
@@ -78,6 +59,3 @@ def daily_plan():
         result = plan.to_dict()
 
     return jsonify(result)
-
-if __name__ == "__main__":
-    app.run(debug=True)

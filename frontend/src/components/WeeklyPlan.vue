@@ -79,141 +79,123 @@
     </div>
 </template>
 
-<script>
-import { ref, reactive, computed, onMounted } from 'vue';
-import { DateTime } from 'luxon';
-import useLoader from '@/use/loader'
+<script setup>
+    import { ref, reactive, computed, onMounted } from 'vue';
+    import { DateTime } from 'luxon';
+    import useLoader from '@/use/loader'
 
-export default {
+    const loader = useLoader();
 
-    setup() {
+    const data = reactive({
+        selected: DateTime.now(),
+        days: []
+    });
 
-        const loader = useLoader();
+    fillData()
 
-        const data = reactive({
-            selected: DateTime.now(),
-            days: []
-        });
-
-        fillData()
-
-        function fillData() {
-            const array = [];
-            for (let i = -1; i < 6; ++i) {
-                array.push({
-                    day: data.selected.plus({ day: i }),
-                    recipe: null,
-                    img: "https://cdn.vuetifyjs.com/images/parallax/material.jpg"
-                });
-            }
-            data.days = array;
+    function fillData() {
+        const array = [];
+        for (let i = -1; i < 6; ++i) {
+            array.push({
+                day: data.selected.plus({ day: i }),
+                recipe: null,
+                img: "https://cdn.vuetifyjs.com/images/parallax/material.jpg"
+            });
         }
+        data.days = array;
+    }
 
-        const allRecipes = [
-            "Chilli con Quinoa",
-            "Pesto-Nudeln",
-            "Pizza",
-            "Asia-Nudeln",
-            "Salat",
-            "Nudeln in Tomatensugo mit Erbsen",
-            "Kartoffel-Rosenkohl-Auflauf",
-            "Veganer Kartoffelsalat",
-            "Gnocchi mit Gemüse",
-            "Schnupfnudeln mit Gemüse",
-            "Brötchen",
-        ];
+    const allRecipes = [
+        "Chilli con Quinoa",
+        "Pesto-Nudeln",
+        "Pizza",
+        "Asia-Nudeln",
+        "Salat",
+        "Nudeln in Tomatensugo mit Erbsen",
+        "Kartoffel-Rosenkohl-Auflauf",
+        "Veganer Kartoffelsalat",
+        "Gnocchi mit Gemüse",
+        "Schnupfnudeln mit Gemüse",
+        "Brötchen",
+    ];
 
-        const recipes = computed(() => {
-            if (search.value.length === 0) {
-                return allRecipes
-            }
-            return allRecipes.filter(r => r.toLowerCase().includes(search.value.toLowerCase()))
-        })
-
-        const dialog = ref(false);
-        const sourceDay = ref(null);
-        const recipe = ref("")
-        const search = ref("");
-
-        function isDay(day, target) {
-            return day.day === target.day &&
-                day.month === target.month &&
-                day.year === target.year
+    const recipes = computed(() => {
+        if (search.value.length === 0) {
+            return allRecipes
         }
-        function isToday(day) {
-            return isDay(day, DateTime.now());
-        }
+        return allRecipes.filter(r => r.toLowerCase().includes(search.value.toLowerCase()))
+    })
 
-        function openDialog(item) {
-            sourceDay.value = item.day;
-            if (item.recipe) {
-                recipe.value = item.recipe;
-            }
-            dialog.value = true;
-        }
-        function saveChanges() {
-            dialog.value = false;
-            const day = data.days.find(d => isDay(d.day, sourceDay.value));
-            if (day) {
-                day.recipe = recipe.value;
-                loader.post("daily-plan", {
-                    date: day.day.toISODate(),
-                    recipe: recipe.value,
-                    name: recipe.value,
-                })
-                recipe.value = "";
-            }
-        }
+    const dialog = ref(false);
+    const sourceDay = ref(null);
+    const recipe = ref("")
+    const search = ref("");
 
-        async function loadDay(day) {
-            loader.get(`weekly-plan`, { date: day.toISODate() })
-                .then(plan => {
-                    data.selected = day;
-                    fillData();
-                    mergePlan(plan);
-                })
-        }
+    function isDay(day, target) {
+        return day.day === target.day &&
+            day.month === target.month &&
+            day.year === target.year
+    }
+    function isToday(day) {
+        return isDay(day, DateTime.now());
+    }
 
-        async function prevDay() {
-            loadDay(data.selected.plus({ day: -1 }))
+    function openDialog(item) {
+        sourceDay.value = item.day;
+        if (item.recipe) {
+            recipe.value = item.recipe;
         }
-
-        async function nextDay() {
-            loadDay(data.selected.plus({ day: 1 }))
-        }
-
-        function mergePlan(plan) {
-            plan.forEach(d => {
-                const day = DateTime.fromRFC2822(d.date);
-                const item = data.days.find(dd => isDay(dd.day, day))
-                if (item) {
-                    item.recipe = d.recipe;
-                    item.name = d.name;
-                }
+        dialog.value = true;
+    }
+    function saveChanges() {
+        dialog.value = false;
+        const day = data.days.find(d => isDay(d.day, sourceDay.value));
+        if (day) {
+            day.recipe = recipe.value;
+            loader.post("daily-plan", null, {
+                date: day.day.toISODate(),
+                recipe: recipe.value,
+                name: recipe.value,
             })
-        }
-
-        async function init() {
-            const plan = await loader.get("weekly-plan");
-            mergePlan(plan);
-        }
-
-        onMounted(init);
-
-        return {
-            data,
-            dialog,
-            search,
-            recipe,
-            recipes,
-            isToday,
-            openDialog,
-            saveChanges,
-            prevDay,
-            nextDay
+            recipe.value = "";
         }
     }
-}
+
+    async function loadDay(day) {
+        loader.get(`weekly-plan`, { date: day.toISODate() })
+            .then(plan => {
+                data.selected = day;
+                fillData();
+                mergePlan(plan);
+            })
+    }
+
+    async function prevDay() {
+        loadDay(data.selected.plus({ day: -1 }))
+    }
+
+    async function nextDay() {
+        loadDay(data.selected.plus({ day: 1 }))
+    }
+
+    function mergePlan(plan) {
+        plan.forEach(d => {
+            const day = DateTime.fromRFC2822(d.date);
+            const item = data.days.find(dd => isDay(dd.day, day))
+            if (item) {
+                item.recipe = d.recipe;
+                item.name = d.name;
+            }
+        })
+    }
+
+    async function init() {
+        const plan = await loader.get("weekly-plan");
+        mergePlan(plan);
+    }
+
+    onMounted(init);
+
 </script>
 
 <style>
