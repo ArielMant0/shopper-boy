@@ -1,7 +1,7 @@
 <template>
     <div>
     <v-toolbar density="compact">
-        <v-toolbar-title>
+        <v-toolbar-title class="text-overline">
             Est. Price: <b>{{ priceEstimate.toFixed(2) }} €</b>
         </v-toolbar-title>
         <v-spacer/>
@@ -15,20 +15,20 @@
             icon="mdi-receipt-text-plus-outline"
             variant="plain"/>
     </v-toolbar>
-    <v-list min-width="500">
+    <v-list min-width="50vw">
         <template v-for="(array, cat) in items" :key="cat">
-            <v-list-subheader v-if="array.length > 0" inset>{{ cat }}</v-list-subheader>
+            <div v-if="array.length > 0" class="ml-4 text-overline">{{ cat }}</div>
 
             <v-list-item
                 v-for="item in array"
                 :key="item.name"
-                :title="item.name"
-                :class="'text-caption' + (item.cart ? ' item-in-cart' : '')"
-                >
+                :class="item.cart ? ' item-in-cart' : ''">
+
+                <v-list-item-title class="text-caption">{{ item.name }}</v-list-item-title>
 
                 <template v-slot:prepend>
                     <div class="amount">
-                        <v-text-field v-model="item.amount"
+                        <!-- <v-text-field v-model="item.amount"
                             class="mr-1"
                             type="number"
                             density="compact"
@@ -39,24 +39,39 @@
                             class="mr-2"
                             density="compact"
                             :hide-details="true"
-                            variant="solo"/>
+                            variant="solo"/> -->
+                        <input type="number" min="0"
+                            @change="item.amount = Number.parseFloat($event.target.value)"
+                            class="pa-1 text-caption"
+                            :value="item.amount"
+                            style="max-width:45px;">
+                        <select :value="item.unit"
+                            @change="item.unit = $event.target.value"
+                            class="mr-2 text-caption bg-surface"
+                            style="cursor: pointer;">
+                            <option v-for="unit in units" class="text-caption" :value="unit">
+                                {{ unit }}
+                            </option>
+                        </select>
                     </div>
                 </template>
 
                 <template v-slot:append>
-                    <span>
+                    <span class="text-caption">
                         <v-icon size="x-small">mdi-approximately-equal</v-icon>
                         {{ item.priceEstimate }}
                         €
                     </span>
                     <v-btn @click="toggleCartStatus(item)"
+                        class="pa-0" size="small"
                         :color="item.cart ? 'error' : 'success'"
                         :icon="item.cart ? 'mdi-cart-remove' : 'mdi-cart-check'"
-                        variant="plain"/>
+                        variant="text"/>
                     <v-btn @click="removeItem(item.name)"
+                        size="small"
                         color="error"
                         icon="mdi-playlist-remove"
-                        variant="plain"/>
+                        variant="text"/>
                 </template>
             </v-list-item>
         </template>
