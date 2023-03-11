@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 from app.extensions import db
+from app.models.recipe import Recipe
 
-@dataclass
 class DailyMealPlan(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(60), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    recipe = db.Column(db.String, nullable=False)
+    __tablename__ = "daily_meal_plan"
 
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey(Recipe.id))
+
+    recipe = db.relationship("Recipe", backref="daily_meal_plan")
