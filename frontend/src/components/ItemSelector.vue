@@ -7,13 +7,13 @@
         <v-card-text>
         <v-item-group
             v-model="selectedItems"
-            mandatory multiple
+            multiple
             selected-class="bg-success"
             style="max-height: 55vh; overflow-y: auto;">
             <template v-for="(items, cat) in itemsPerCat">
                 <div class="text-caption">{{ cat }}</div>
                 <div>
-                    <v-item>
+                    <!-- <v-item>
                         <v-btn
                             size="small" color="grey-lighten-1" stacked
                             class="mr-1 mb-1"
@@ -21,7 +21,7 @@
                             <v-icon>mdi-plus</v-icon>
                             <span>new</span>
                         </v-btn>
-                    </v-item>
+                    </v-item> -->
                     <v-item v-for="(item, index) in items" :key="index"
                         :value="item.name"
                         v-slot="{ selectedClass, toggle }">
@@ -29,7 +29,7 @@
                             size="small" color="grey-lighten-1" stacked
                             :class="['mr-1', 'mb-1', selectedClass]"
                             @click="toggle">
-                            <v-icon>{{ item.icon }}</v-icon>
+                            <v-icon>mdi-food</v-icon>
                             <span>{{ item.name }}</span>
                         </v-btn>
                     </v-item>
@@ -85,43 +85,6 @@ export default {
         })
 
         const app = useAppStore();
-
-        const items = reactive([
-            {
-                name: "Apfel",
-                icon: "mdi-food-apple-outline",
-                category: "Obst"
-            },{
-                name: "Birne",
-                icon: "mdi-food",
-                category: "Obst"
-            },{
-                name: "Mandarine",
-                icon: "mdi-food",
-                category: "Obst"
-            },{
-                name: "Melone",
-                icon: "mdi-food",
-                category: "Obst"
-            },{
-                name: "Kirsche",
-                icon: "mdi-food",
-                category: "Obst"
-            },{
-                name: "Orange",
-                icon: "mdi-food",
-                category: "Obst"
-            },{
-                name: "Heidelbeere",
-                icon: "mdi-food",
-                category: "Obst"
-            },{
-                name: "Paprika",
-                icon: "mdi-food",
-                category: "Gemüse"
-            },
-        ]);
-
         const itemsPerCat = computed(() => {
             const obj = {};
             app.categories.forEach(cat => {
@@ -130,7 +93,7 @@ export default {
             return obj;
         });
         function filter(category) {
-            return items.filter(d => {
+            return app.products.filter(d => {
                 return d.category === category &&
                     !app.shoppingListIncludes(d.name)
             });
@@ -163,7 +126,7 @@ export default {
             }
         }
         function addItems() {
-            app.addItemsToShoppingList(items.filter(d => selectedItems.value.includes(d.name)))
+            app.addItemsToShoppingList(app.products.filter(d => selectedItems.value.includes(d.name)))
             dialog.value = false;
             emit("close");
         }

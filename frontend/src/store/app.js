@@ -29,7 +29,8 @@ export const useAppStore = defineStore('app', {
                 category: "Gemüse"
             },
         ],
-        categories: ["Obst", "Gemüse", "Milchprodukte", "Sonstiges"],
+        categories: [],
+        products: [],
         units: ["Stk.", "g", "kg", "EL", "TL", "Msp"]
     }),
 

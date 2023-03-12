@@ -13,7 +13,7 @@ RECIPES_DEFAULT = [
     "Kartoffel-Rosenkohl-Auflauf",
     "Veganer Kartoffelsalat",
     "Gnocchi",
-    "Schnupfnudeln",
+    "Schupfnudeln",
     "Brötchen",
     "Linseneintopf",
     "Ramen",

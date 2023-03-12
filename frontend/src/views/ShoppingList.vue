@@ -6,14 +6,21 @@
     </div>
 </template>
 
-<script>
-import ItemList from '@/components/ItemList.vue';
+<script setup>
+    import ItemList from '@/components/ItemList.vue';
+    import { useAppStore } from '@/store/app';
+    import useLoader from '@/use/loader';
+    import { onMounted } from 'vue';
 
-export default {
-    components: { ItemList },
-    setup() {
-    },
-}
+    const app = useAppStore();
+    const loader = useLoader()
+
+    function init() {
+        loader.get("categories").then(cats => app.categories = cats);
+        loader.get("products").then(prods => app.products = prods);
+    }
+    onMounted(init)
+
 </script>
 
 <style scoped>
