@@ -1,9 +1,89 @@
 import datetime
+import functools
+import calendar
 from flask import jsonify, request
 
 from app.main import bp
 from app.extensions import db
 import app.models as am
+
+def get_monthly_income(date):
+    if date.day != 1:
+        date = date.replace(day=1);
+
+    nextMonth = (date.month + 1) % 13
+    nextYear = date.year + 1 if nextMonth == 1 else date.year
+    end_date = date.replace(month=nextMonth, year=nextYear)
+
+    # TODO: let database calc the sum
+    return db.session.execute(db.select(am.Income).filter(
+        am.Income.date_start.between(date, end_date) |
+        (am.Income.date_end.isnot(None) & (am.Income.date_start <= date) & (am.Income.date_end >= date))
+    )).scalars()
+
+def get_monthly_expenses(date):
+    nextMonth = (date.month + 1) % 13
+    nextYear = date.year + 1 if nextMonth == 1 else date.year
+    end_date = date.replace(month=nextMonth, year=nextYear)
+
+    # TODO: let database calc the sum
+    return db.session.execute(db.select(am.Expense).filter(
+        am.Expense.date_start.between(date, end_date) |
+        (am.Expense.date_end.isnot(None) & (am.Expense.date_start <= date) & (am.Expense.date_end >= date))
+    )).scalars()
+
+@bp.get("/balance")
+def balance():
+
+    date = request.args.get('date')
+    if date is None:
+        date = datetime.date.today()
+
+    # set to first day of the month
+    date = date.replace(day=1);
+
+    incs = get_monthly_income(date)
+    exps = get_monthly_expenses(date)
+
+    result = [{
+        "income": functools.reduce(lambda a, b: a.value + b.value, incs, 0),
+        "expenses": functools.reduce(lambda a, b: a.value + b.value, exps, 0),
+        "date": date.isoformat(),
+        "title": calendar.month_name[date.month]
+    }]
+
+    return jsonify(result)
+
+
+@bp.route("/income", methods=["GET", "POST"])
+def income():
+    if request.method == "GET":
+        # return all incomes for the month
+        date = request.args.get('date')
+        if date is None:
+            date = datetime.date.today()
+        # set to first day of the month
+        date = date.replace(day=1);
+        incs = get_monthly_income(date)
+        results = [am.orm_to_dict(i) for i in incs]
+        return jsonify(results)
+    else:
+        # get data
+        name = request.args.get('name')
+        value = request.args.get('value')
+        if name is None or value is None:
+            return "missing name or value for new income", 400
+
+        date_start = request.args.get('date')
+        if date_start is None:
+            date_start = datetime.date.today()
+
+        new_income = am.Income(name=name, value=value, date_start=date_start)
+        db.session.add(new_income)
+        db.session.commit()
+
+        return jsonify(am.orm_to_dict(new_income))
+
 
 @bp.get("/categories")
 def categories():

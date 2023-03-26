@@ -25,6 +25,9 @@
                     <div v-if="diff(d) < 0" class="text-error">
                         {{ diff(d).toFixed(2) }}
                     </div>
+                    <div v-else-if="diff(d) == 0">
+                        {{ diff(d).toFixed(2) }}
+                    </div>
                     <div v-else class="text-success">
                         {{ diff(d).toFixed(2) }}
                     </div>
@@ -32,39 +35,80 @@
             </v-row>
 
         </v-container>
+
+        <div>
+            <v-btn color="success" size="small" class="mb-2 mr-1" @click="addIncome">add income</v-btn>
+            <v-btn color="error" size="small" class="mb-2 ml-1" @click="addExpense">add expense</v-btn>
+        </div>
+
+        <v-expansion-panels density="compact">
+            <v-expansion-panel title="Details">
+                <v-expansion-panel-text>
+                <v-data-table v-if="details"
+                    v-model:items-per-page="itemsPerPage"
+                    :headers="headers"
+                    :items="details"
+                    density="compact"
+                    max-width="200"
+                    class="elevation-1">
+
+                    <template v-slot:item.value="{ item }">
+                        {{ item.value.value }} {{ item.value.currency }}
+                    </template>
+                </v-data-table>
+            </v-expansion-panel-text>
+            </v-expansion-panel>
+        </v-expansion-panels>
+
     </div>
 </template>
 
-<script>
-import { computed } from 'vue'
+<script setup>
+    import { ref, computed } from 'vue'
 
-export default {
-    props: {
+    const props = defineProps({
         data: {
             type: Array,
             required: true
+        },
+        details: {
+            type: Array,
+            required: false
         },
         title: {
             type: String,
             default: "Monthly Expenses"
         },
-    },
-    setup(props) {
+    });
 
-        const cols = computed(() => {
-            return [""].concat(props.data.map(d => d.title))
-        })
+    const itemsPerPage = ref(10)
+    const cols = computed(() => {
+        return [""].concat(props.data.map(d => d.title))
+    })
 
-        function diff(d) {
-            return d.income - d.expenses
-        }
+    function diff(d) { return d.income - d.expenses }
 
-        return {
-            cols,
-            diff
-        }
+    const headers = [
+        {
+            title: 'Name',
+            align: 'start',
+            sortable: false,
+            key: 'name',
+        },{
+            title: 'Value',
+            sortable: true,
+            key: 'value',
+        },
+    ]
+
+    function addIncome() {
+
     }
-}
+
+    function addExpense() {
+
+    }
+
 </script>
 
 <style scoped>
