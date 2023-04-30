@@ -1,8 +1,12 @@
 // Utilities
 import { defineStore } from 'pinia'
+import { DateTime } from 'luxon';
 
 export const useAppStore = defineStore('app', {
     state: () => ({
+
+        selectedDate: DateTime.now(),
+
         shoppingList: [
             {
                 name: "Apfel",
@@ -54,6 +58,15 @@ export const useAppStore = defineStore('app', {
         priceEstimate: (state) => {
             return state.shoppingList.reduce((acc, d) => acc+d.priceEstimate, 0)
         },
+        selectedWeek: (state) => {
+            return state.selectedDate.weekNumber
+        },
+        selectedMonth: (state) => {
+            return state.selectedDate.month
+        },
+        selectedYear: (state) => {
+            return state.selectedDate.year
+        },
     },
 
     actions: {
@@ -79,7 +92,15 @@ export const useAppStore = defineStore('app', {
 
         shoppingListIncludes(name) {
             return this.shoppingList.find(d => d.name === name) !== undefined
-        }
+        },
+
+        minusDate(move) {
+            this.selectedDate = this.selectedDate.minus(move);
+        },
+
+        plusDate(move) {
+            this.selectedDate = this.selectedDate.plus(move);
+        },
 
     }
 })

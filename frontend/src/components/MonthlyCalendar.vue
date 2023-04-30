@@ -33,84 +33,79 @@
                 <v-col>{{ num }}</v-col>
 
                 <v-col v-for="day in week">
-                    <p v-if="inDay(day)" class="in-month today">{{ day.day }}</p>
-                    <p v-else-if="inMonth(day)" class="in-month">{{ day.day }}</p>
-                    <p v-else class="not-in-month">{{ day.day }}</p>
+                    <div :class="dayClasses(day)">
+                        <slot name="day">{{ day.day }}</slot>
+                    </div>
                 </v-col>
             </v-row>
         </v-container>
     </div>
 </template>
 
-<script>
-import { DateTime, Info } from 'luxon';
-import { ref, computed } from 'vue';
+<script setup>
+    import { useAppStore } from '@/store/app';
+    import { DateTime, Info } from 'luxon';
+    import { computed } from 'vue';
 
-export default {
-    setup() {
+    const app = useAppStore();
+    const weekdays = Info.weekdays("short");
 
-        const weekdays = Info.weekdays("short");
+    const props = defineProps({
+        data: {
+            type: DateTime,
+            required: true
+        }
+    })
 
-        const today = DateTime.now();
-        const data = ref(DateTime.now())
+    const today = DateTime.now();
 
-        const mStart = computed(() => {
-            return data.value
-                .startOf("month")
-                .startOf("week")
-        });
-        const mEnd = computed(() => {
-            return data.value
-                .endOf("month")
-                .plus({ week: 1 })
-        });
+    const mStart = computed(() => {
+        return props.data
+            .startOf("month")
+            .startOf("week")
+    });
+    const mEnd = computed(() => {
+        return props.data
+            .endOf("month")
+            .plus({ week: 1 })
+    });
 
-        const weeks = computed(() => {
-            const obj = new Map();
-            let curr = mStart.value;
-            while (curr < mEnd.value) {
-                // for each week
-                const array = [];
-                const wn = curr.weekNumber;
-                for (let j = 0; j < weekdays.length; ++j) {
-                    array.push(curr)
-                    curr = curr.plus({ day: 1 })
-                }
-                obj.set(wn, array);
+    const weeks = computed(() => {
+        const obj = new Map();
+        let curr = mStart.value;
+        while (curr < mEnd.value) {
+            // for each week
+            const array = [];
+            const wn = curr.weekNumber;
+            for (let j = 0; j < weekdays.length; ++j) {
+                array.push(curr)
+                curr = curr.plus({ day: 1 })
             }
-            return obj;
-        });
+            obj.set(wn, array);
+        }
+        return obj;
+    });
 
-        function inMonth(dt) {
-            return dt.month === data.value.month;
-        }
-        function inWeek(dt) {
-            return dt.year === today.year && dt.weekNumber === today.weekNumber;
-        }
-        function inDay(dt) {
-            return inWeek(dt) && dt.day === today.day;
-        }
-
-        function prevMonth() {
-            data.value = data.value.plus({ month: -1 })
-        }
-        function nextMonth() {
-            data.value = data.value.plus({ month: 1 })
-        }
-
-        return {
-            data,
-            mStart, mEnd,
-            weeks,
-            weekdays,
-            inMonth,
-            inWeek,
-            inDay,
-            prevMonth,
-            nextMonth
-        }
+    function inMonth(dt) {
+        return dt.month === props.data.month;
     }
-}
+    function inWeek(dt) {
+        return dt.year === today.year && dt.weekNumber === today.weekNumber;
+    }
+    function inDay(dt) {
+        return inWeek(dt) && dt.day === today.day;
+    }
+    function dayClasses(dt) {
+        return inDay(dt) ? ["today", "in-month"] :
+            (inMonth(dt) ? ["in-month"] : ["not-in-month"])
+    }
+
+    function prevMonth() {
+        app.minusDate({ month: 1 })
+    }
+    function nextMonth() {
+        app.plusDate({ month: 1 })
+    }
 </script>
 
 <style>

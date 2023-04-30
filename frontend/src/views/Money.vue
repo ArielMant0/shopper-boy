@@ -1,59 +1,86 @@
 <template>
     <div class="main">
-        <div class="ma-2 pa-2 wrapper">
-            <MonthlyExpenses :data="data.expenses" :details="data.details"/>
-            <div class="mt-6">
-                <GoalsTracker :data="goals"/>
-            </div>
+        <div class="ma-1 pa-1 wrapper" style="width: 100%">
+            <MonthlyExpenses
+                :data="data.balance"
+                :details="details"
+                @income-update="loadIncomes"
+                @expense-update="loadExpenses"/>
         </div>
     </div>
 </template>
 
 <script setup>
-    import GoalsTracker from '@/components/GoalsTracker.vue';
     import MonthlyExpenses from '@/components/MonthlyExpenses.vue';
-    import { reactive, onMounted, computed } from 'vue';
     import useLoader from '@/use/loader';
+    import { computed, reactive, onMounted } from 'vue';
+    import { useAppStore } from '@/store/app';
     import { DateTime } from 'luxon';
 
     const loader = useLoader();
-
-    const selectedDate = DateTime.now()
-    const selectedMonth = computed(() => selectedDate.month)
+    const app = useAppStore();
 
     const data = reactive({
-        expenses: [],
-        details: []
+        balance: [],
+        incomes: [],
+        expenses: []
+    })
+    const details = computed(() => {
+        const all = data.incomes.concat(data.expenses)
+        all.sort((a, b) => a.date_start - b.date_start)
+        return all;
     })
 
-    const goals = reactive([
-        {
-            title: "reduce number of shopping trips",
-            min: 0,
-            max: 10,
-            goal: 4,
-            moreBetter: false,
-            value: 2
-        },{
-            title: "buy less junk food",
-            min: 0,
-            max: 10,
-            goal: 2,
-            moreBetter: false,
-            value: 7
-        },{
-            title: "eat more vegan meals",
-            min: 0,
-            max: 10,
-            goal: 6,
-            moreBetter: true,
-            value: 8
+    function addBalance(d) {
+        data.balance.push(d);
+        data.balance.sort((a, b) => a < b)
+    }
+    function loadIncomes(loadBalance=true) {
+        if (loadBalance) {
+            data.balance = [];
+            const prev = app.selectedDate.startOf("month").minus({ month: 1}).toISODate();
+            const curr = app.selectedDate.startOf("month").toISODate();
+            loader.get("/balance", { date: prev }).then(d => addBalance(d))
+            loader.get("/balance", { date: curr }).then(d => addBalance(d))
         }
-    ]);
+        loader.get("/income").then(d => {
+            data.incomes = d.map(dd => {
+                dd.date_start = DateTime.fromRFC2822(dd.date_start)
+                if (dd.date_end) {
+                    dd.date_end = DateTime.fromRFC2822(dd.date_end)
+                }
+                return dd;
+            })
+        });
+    }
+    function loadExpenses(loadBalance=true) {
+        if (loadBalance) {
+            data.balance = [];
+            const prev = app.selectedDate.startOf("month").minus({ month: 1}).toISODate();
+            const curr = app.selectedDate.startOf("month").toISODate();
+            loader.get("/balance", { date: prev }).then(d => addBalance(d))
+            loader.get("/balance", { date: curr }).then(d => addBalance(d))
+        }
+        loader.get("/expense").then(d => {
+            data.expenses = d.map(dd => {
+                dd.value = -dd.value;
+                dd.date_start = DateTime.fromRFC2822(dd.date_start)
+                if (dd.date_end) {
+                    dd.date_end = DateTime.fromRFC2822(dd.date_end)
+                }
+                return dd;
+            })
+        })
+    }
 
     onMounted(function() {
-        loader.get("/income").then(d => data.details = d)
-        loader.get("/balance").then(d => data.expenses = d)
+        data.balance = [];
+        const prev = app.selectedDate.startOf("month").minus({ month: 1}).toISODate();
+        const curr = app.selectedDate.startOf("month").toISODate();
+        loader.get("/balance", { date: prev }).then(d => addBalance(d))
+        loader.get("/balance", { date: curr }).then(d => addBalance(d))
+        loadIncomes(false);
+        loadExpenses(false);
     })
 
 </script>
@@ -69,6 +96,6 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    max-width: 80%;
+    max-width: 70%;
 }
 </style>

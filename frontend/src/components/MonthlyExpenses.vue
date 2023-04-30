@@ -1,70 +1,109 @@
 <template>
-    <div>
-        <v-container>
-            <v-row>
-                <v-col cols="4" class="table-header" v-for="c in cols" :key="c">{{ c }}</v-col>
-            </v-row>
-
-            <v-row>
-                <v-col cols="4">Income:</v-col>
-                <v-col cols="4" class="table-item" v-for="(d, i) in data" :key="i">
-                    {{ d.income.toFixed(2) }}
+    <div style="font-size: small; width: 100%;">
+        <v-container fluid>
+            <v-row dense>
+                <v-col cols="3" class="table-item">Month</v-col>
+                <v-col cols="3" class="table-item text-success">
+                    <v-icon>mdi-arrow-top-right-thin</v-icon>
+                </v-col>
+                <v-col cols="3" class="table-item text-error">
+                    <v-icon>mdi-arrow-bottom-right-thin</v-icon>
+                </v-col>
+                <v-col cols="3" class="table-item">
+                    <v-icon>mdi-sigma</v-icon>
                 </v-col>
             </v-row>
 
-            <v-row>
-                <v-col cols="4">Expenses:</v-col>
-                <v-col cols="4" class="table-item" v-for="(d, i) in data" :key="i">
-                    {{ d.expenses.toFixed(2) }}
-                </v-col>
-            </v-row>
-
-            <v-row>
-                <v-col cols="4">Difference:</v-col>
-                <v-col cols="4" class="table-item" v-for="(d, i) in data" :key="i">
+            <v-row v-for="(d, i) in data" :key="i" dense>
+                <v-col cols="3" class="table-item">{{ d.title }}</v-col>
+                <v-col cols="3" class="table-item">{{ d.income.toFixed(2) }} €</v-col>
+                <v-col cols="3" class="table-item">{{ d.expenses.toFixed(2) }} €</v-col>
+                <v-col cols="3" class="table-item">
                     <div v-if="diff(d) < 0" class="text-error">
-                        {{ diff(d).toFixed(2) }}
+                        {{ diff(d).toFixed(2) }} €
                     </div>
                     <div v-else-if="diff(d) == 0">
-                        {{ diff(d).toFixed(2) }}
+                        {{ diff(d).toFixed(2) }} €
                     </div>
                     <div v-else class="text-success">
-                        {{ diff(d).toFixed(2) }}
+                        {{ diff(d).toFixed(2) }} €
                     </div>
                 </v-col>
             </v-row>
 
         </v-container>
 
-        <div>
+        <div class="d-flex justify-end">
             <v-btn color="success" size="small" class="mb-2 mr-1" @click="addIncome">add income</v-btn>
             <v-btn color="error" size="small" class="mb-2 ml-1" @click="addExpense">add expense</v-btn>
         </div>
 
-        <v-expansion-panels density="compact">
-            <v-expansion-panel title="Details">
-                <v-expansion-panel-text>
-                <v-data-table v-if="details"
-                    v-model:items-per-page="itemsPerPage"
-                    :headers="headers"
-                    :items="details"
-                    density="compact"
-                    max-width="200"
-                    class="elevation-1">
+        <div style="max-height: 50%;">
+            <v-data-table v-if="details"
+                v-model:items-per-page="itemsPerPage"
+                :headers="headers"
+                :items="details"
+                density="compact"
+                max-width="200"
+                class="elevation-1">
 
-                    <template v-slot:item.value="{ item }">
-                        {{ item.value.value }} {{ item.value.currency }}
-                    </template>
-                </v-data-table>
-            </v-expansion-panel-text>
-            </v-expansion-panel>
-        </v-expansion-panels>
+                <template v-slot:item.value="{ item }">
+                    {{ item.raw.value }} {{ item.raw.currency }}
+                </template>
 
+                <template v-slot:item.date_start="{ item }">
+                    {{ item.raw.date_start.toLocaleString(DateTime.DATE_FULL) }}
+                </template>
+            </v-data-table>
+        </div>
+
+        <v-dialog v-model="dialog" width="auto" min-width="300">
+            <v-card>
+                <v-card-title>
+                    <span class="text-h5">Add {{ dialogType === 0 ? 'Income' : 'Expense' }} Source</span>
+                </v-card-title>
+                <v-card-text>
+                    <v-form v-model="form">
+                        <v-text-field v-model="formName" class="mb-2"
+                            label="name" :rules="[required]"
+                            density="compact" hide-details/>
+                        <v-text-field v-model="formValue" class="mb-2"
+                            label="value" :rules="[required, v => v > 0 || 'value must be greater than 0']"
+                            type="number" min="0.01" step="0.01"
+                            density="compact" hide-details/>
+                        <v-text-field v-model="formDateAsStr" class="mb-2"
+                            label="start date" :rules="[required]"
+                            type="date" @change="setFormDate"
+                            density="compact" hide-details/>
+                        <v-checkbox v-model="formHasEnd" class="mb-2"
+                            label="has end date" density="compact" hide-details/>
+                        <v-text-field v-if="formHasEnd" v-model="formDateEndAsStr" class="mb-2"
+                            label="end date" type="date" @change="setFormDateEnd"
+                            density="compact" hide-details/>
+                        <v-checkbox v-model="formRecurring" class="mb-2"
+                            label="recurring" density="compact" hide-details/>
+                        <v-select v-if="formRecurring" v-model="formRecType" class="mb-2"
+                            :items="formRecTypes"
+                            density="compact" hide-details/>
+                        <v-text-field v-if="formRecurring" v-model="formRecValue" class="mb-2"
+                            type="number" min="1" step="1" label="every"
+                            :rules="[v => !!(v && formRecurring) || 'value required']"
+                            density="compact" hide-details/>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn color="warning" @click="dialog = false">cancel</v-btn>
+                    <v-btn color="success" @click="submitIncomeExpense">submit</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
 <script setup>
-    import { ref, computed } from 'vue'
+    import useLoader from '@/use/loader';
+    import { ref } from 'vue'
+    import { DateTime } from 'luxon';
 
     const props = defineProps({
         data: {
@@ -81,10 +120,26 @@
         },
     });
 
+    const emit = defineEmits(["income-update", "expense-update"]);
+
     const itemsPerPage = ref(10)
-    const cols = computed(() => {
-        return [""].concat(props.data.map(d => d.title))
-    })
+
+    const dialog = ref(false);
+    const dialogType = ref(0);
+    const form = ref(false);
+    const formName = ref("Name");
+    const formValue = ref(100);
+    const formDate = ref(DateTime.now());
+    const formDateAsStr = ref(formDate.value.toISODate())
+    const formHasEnd = ref(false);
+    const formDateEnd = ref(DateTime.now().plus({ weeks: 1 }));
+    const formDateEndAsStr = ref(formDateEnd.value.toISODate());
+    const formRecurring = ref(false)
+    const formRecType = ref("week")
+    const formRecTypes = ["week", "month", "year"]
+    const formRecValue = ref(1)
+
+    const loader = useLoader();
 
     function diff(d) { return d.income - d.expenses }
 
@@ -95,26 +150,70 @@
             sortable: false,
             key: 'name',
         },{
-            title: 'Value',
+            title: 'Wert',
             sortable: true,
             key: 'value',
+        },{
+            title: 'Datum',
+            sortable: true,
+            key: 'date_start',
         },
     ]
 
     function addIncome() {
-
+        dialogType.value = 0;
+        dialog.value = true;
     }
 
     function addExpense() {
+        dialogType.value = 1;
+        dialog.value = true;
+    }
 
+    function submitIncomeExpense() {
+        dialog.value = false;
+        const which = dialogType.value === 0 ? "/income" : "/expense"
+        const params = {
+            name: formName.value,
+            value: formValue.value,
+            date_start: formDate.value.toISODate()
+        };
+
+        if (formHasEnd.value) {
+            params.date_end = formDateEnd.value.toISODate();
+        }
+        if (formRecurring.value) {
+            params.recurrence = formRecType.value;
+            params.recurrence_value = formRecValue.value;
+        }
+
+        loader.post(which, null, params).then(() => {
+            emit(dialogType.value === 0 ? "income-update" : "expense-update")
+            formName.value = "Name";
+            formValue.value = 0;
+            formDate.value = DateTime.now();
+            formDateAsStr.value = formDate.value.toISODate()
+            formRecurring.value = false;
+            formHasEnd.value = false;
+            formDateEnd.value = formDate.value.plus({ weeks: 1 });
+            formDateAsStr.value = formDateEnd.value.toISODate()
+        })
+    }
+
+    function required (v) {
+        return !!v || 'Field is required'
+    }
+
+    function setFormDate() {
+        formDate.value = DateTime.fromISO(formDateAsStr.value);
+    }
+    function setFormDateEnd() {
+        formDateEnd.value = DateTime.fromISO(formDateEndAsStr.value);
     }
 
 </script>
 
 <style scoped>
-.table-header {
-    text-align: center;
-}
 .table-item {
     text-align: right;
 }

@@ -1,8 +1,8 @@
 import datetime
-import functools
 import calendar
 from flask import jsonify, request
 
+import app.utils as utils
 from app.main import bp
 from app.extensions import db
 import app.models as am
@@ -17,17 +17,21 @@ def get_monthly_income(date):
 
     # TODO: let database calc the sum
     return db.session.execute(db.select(am.Income).filter(
+        ((am.Income.date_start < date) & am.Income.date_end == None) |
         am.Income.date_start.between(date, end_date) |
         (am.Income.date_end.isnot(None) & (am.Income.date_start <= date) & (am.Income.date_end >= date))
     )).scalars()
 
 def get_monthly_expenses(date):
+    if date.day != 1:
+        date = date.replace(day=1);
+
     nextMonth = (date.month + 1) % 13
     nextYear = date.year + 1 if nextMonth == 1 else date.year
     end_date = date.replace(month=nextMonth, year=nextYear)
 
-    # TODO: let database calc the sum
     return db.session.execute(db.select(am.Expense).filter(
+        ((am.Expense.date_start < date) & am.Expense.date_end == None) |
         am.Expense.date_start.between(date, end_date) |
         (am.Expense.date_end.isnot(None) & (am.Expense.date_start <= date) & (am.Expense.date_end >= date))
     )).scalars()
@@ -35,22 +39,23 @@ def get_monthly_expenses(date):
 @bp.get("/balance")
 def balance():
 
-    date = request.args.get('date')
-    if date is None:
+    date_str = request.args.get('date')
+    if date_str is None:
         date = datetime.date.today()
-
+    else:
+        date = datetime.date.fromisoformat(date_str)
     # set to first day of the month
     date = date.replace(day=1);
 
-    incs = get_monthly_income(date)
-    exps = get_monthly_expenses(date)
+    incs = [i.value for i in get_monthly_income(date)]
+    exps = [i.value for i in get_monthly_expenses(date)]
 
-    result = [{
-        "income": functools.reduce(lambda a, b: a.value + b.value, incs, 0),
-        "expenses": functools.reduce(lambda a, b: a.value + b.value, exps, 0),
+    result = {
+        "income": sum(incs),
+        "expenses": sum(exps),
         "date": date.isoformat(),
         "title": calendar.month_name[date.month]
-    }]
+    }
 
     return jsonify(result)
 
@@ -59,30 +64,71 @@ def balance():
 def income():
     if request.method == "GET":
         # return all incomes for the month
-        date = request.args.get('date')
-        if date is None:
+        date_str = request.args.get('date')
+        if date_str is None:
             date = datetime.date.today()
+        else:
+            date = datetime.date.fromisoformat(date_str)
         # set to first day of the month
         date = date.replace(day=1);
         incs = get_monthly_income(date)
-        results = [am.orm_to_dict(i) for i in incs]
-        return jsonify(results)
+
+        result = []
+        incsDicts = [utils.orm_to_dict(i) for i in incs]
+        for i in incsDicts:
+            if i["recurrence"] is not None:
+                items = utils.items_from_recurrence_per_month(i, date)
+                result = result + items
+            else:
+                result.append(i)
+
+        return jsonify(result)
     else:
         # get data
-        name = request.args.get('name')
-        value = request.args.get('value')
-        if name is None or value is None:
-            return "missing name or value for new income", 400
-
-        date_start = request.args.get('date')
-        if date_start is None:
-            date_start = datetime.date.today()
-
-        new_income = am.Income(name=name, value=value, date_start=date_start)
+        data = utils.parse_income_expense_data(request.args)
+        new_income = am.Income(
+            name=data[0], value=data[1], date_start=data[2], date_end=data[3],
+            recurrence=data[4], recurrence_value=data[5]
+        )
         db.session.add(new_income)
         db.session.commit()
 
-        return jsonify(am.orm_to_dict(new_income))
+        return jsonify(utils.orm_to_dict(new_income))
+
+@bp.route("/expense", methods=["GET", "POST"])
+def expense():
+    if request.method == "GET":
+        # return all expenses for the month
+        date_str = request.args.get('date')
+        if date_str is None:
+            date = datetime.date.today()
+        else:
+            date = datetime.date.fromisoformat(date_str)
+        # set to first day of the month
+        date = date.replace(day=1);
+        exps = get_monthly_expenses(date)
+
+        result = []
+        expsDicts = [utils.orm_to_dict(i) for i in exps]
+        for i in expsDicts:
+            if i["recurrence"] is not None:
+                items = utils.items_from_recurrence_per_month(i, date)
+                result = result + items
+            else:
+                result.append(i)
+
+        return jsonify(result)
+    else:
+        # get data
+        data = utils.parse_income_expense_data(request.args)
+        new_expense = am.Expense(
+            name=data[0], value=data[1], date_start=data[2], date_end=data[3],
+            recurrence=data[4], recurrence_value=data[5]
+        )
+        db.session.add(new_expense)
+        db.session.commit()
+
+        return jsonify(utils.orm_to_dict(new_expense))
 
 
 @bp.get("/categories")
@@ -95,7 +141,7 @@ def products():
     products = db.session.execute(db.select(am.Product)).scalars()
     results = []
     for r in products:
-        obj = am.orm_to_dict(r)
+        obj = utils.orm_to_dict(r)
         cat = db.session.execute(db.select(am.ProductCategory).filter_by(id=r.category_id)).scalar()
         if cat:
             obj["category"] = cat.name
@@ -105,7 +151,7 @@ def products():
 @bp.get("/recipes")
 def recipes():
     recipes = db.session.execute(db.select(am.Recipe)).scalars()
-    return jsonify([am.orm_to_dict(r) for r in recipes])
+    return jsonify([utils.orm_to_dict(r) for r in recipes])
 
 @bp.get("/weekly-plan")
 def weekly_plan():
@@ -126,7 +172,7 @@ def weekly_plan():
 
     result = []
     for p in plan:
-        obj = am.orm_to_dict(p)
+        obj = utils.orm_to_dict(p)
         obj["recipe_name"] = p.recipe.name
         result.append(obj)
 
@@ -166,6 +212,6 @@ def daily_plan():
         plan = db.session.execute(db.select(am.DailyMealPlan).filter_by(date=date)).scalar()
 
     if plan is not None:
-        result = am.orm_to_dict(plan)
+        result = utils.orm_to_dict(plan)
 
     return jsonify(result)
