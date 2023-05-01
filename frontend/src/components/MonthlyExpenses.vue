@@ -1,13 +1,14 @@
 <template>
     <div style="font-size: small; width: 100%;">
-        <v-container fluid>
+
+        <v-container fluid class="simple-table">
             <v-row dense>
                 <v-col cols="3" class="table-item">Month</v-col>
                 <v-col cols="3" class="table-item text-success">
-                    <v-icon>mdi-arrow-top-right-thin</v-icon>
+                    <v-icon>mdi-trending-up</v-icon>
                 </v-col>
                 <v-col cols="3" class="table-item text-error">
-                    <v-icon>mdi-arrow-bottom-right-thin</v-icon>
+                    <v-icon>mdi-trending-down</v-icon>
                 </v-col>
                 <v-col cols="3" class="table-item">
                     <v-icon>mdi-sigma</v-icon>
@@ -33,12 +34,12 @@
 
         </v-container>
 
-        <div class="d-flex justify-end">
+        <div class="d-flex justify-end mr-3 ml-3">
             <v-btn color="success" size="small" class="mb-2 mr-1" @click="addIncome">add income</v-btn>
             <v-btn color="error" size="small" class="mb-2 ml-1" @click="addExpense">add expense</v-btn>
         </div>
 
-        <div style="max-height: 50%;">
+        <div style="max-height: 50%;" class="ma-3">
             <v-data-table v-if="details"
                 v-model:items-per-page="itemsPerPage"
                 :headers="headers"
@@ -48,12 +49,20 @@
                 class="elevation-1">
 
                 <template v-slot:item.value="{ item }">
-                    {{ item.raw.value }} {{ item.raw.currency }}
+                    {{ item.raw.value.toFixed(2) }} {{ item.raw.currency }}
                 </template>
 
                 <template v-slot:item.date_start="{ item }">
                     {{ item.raw.date_start.toLocaleString(DateTime.DATE_FULL) }}
                 </template>
+
+                <template v-slot:item.id="{ item }">
+                    <div class="d-flex justify-end">
+                        <v-icon v-if="item.raw.recurrence" size="small" class="clickable ml-1">mdi-pencil</v-icon>
+                        <v-icon size="small" class="clickable ml-1" color="error" @click="setDelete(item.raw)">mdi-delete</v-icon>
+                    </div>
+                </template>
+
             </v-data-table>
         </div>
 
@@ -97,12 +106,31 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <v-dialog v-model="delDialog" width="auto" min-width="300">
+            <v-card>
+                <v-card-title>
+                    <span class="text-h5">Delete {{ delItem.name }}</span>
+                </v-card-title>
+                <v-card-text>
+                    Are you sure you want to delete <b>{{ delItem.name }}</b>?
+                    <div class="ml-4">
+                        <div class="text-caption">Date: {{ delItem.date_start.toISODate() }}</div>
+                        <div class="text-caption">Value: {{ delItem.value.toFixed(2) }}</div>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn color="warning" @click="delDialog = false">cancel</v-btn>
+                    <v-btn color="error" @click="deleteItem">delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
 <script setup>
     import useLoader from '@/use/loader';
-    import { ref } from 'vue'
+    import { ref, reactive } from 'vue'
     import { DateTime } from 'luxon';
 
     const props = defineProps({
@@ -139,24 +167,35 @@
     const formRecTypes = ["week", "month", "year"]
     const formRecValue = ref(1)
 
+    const delDialog = ref(false);
+    let delItem = reactive({});
+
     const loader = useLoader();
 
     function diff(d) { return d.income - d.expenses }
 
     const headers = [
         {
+            title: 'Datum',
+            sortable: true,
+            key: 'date_start',
+            align: "start",
+        },{
             title: 'Name',
             align: 'start',
-            sortable: false,
+            sortable: true,
             key: 'name',
+            align: "end",
         },{
             title: 'Wert',
             sortable: true,
             key: 'value',
+            align: "end",
         },{
-            title: 'Datum',
-            sortable: true,
-            key: 'date_start',
+            title: 'Aktionen',
+            sortable: false,
+            key: 'id',
+            align: "end",
         },
     ]
 
@@ -211,10 +250,27 @@
         formDateEnd.value = DateTime.fromISO(formDateEndAsStr.value);
     }
 
+    function setDelete(item) {
+        delItem = item;
+        delDialog.value = true;
+    }
+    function deleteItem() {
+        if (delItem) {
+            delDialog.value = false;
+        }
+    }
+
 </script>
 
 <style scoped>
 .table-item {
     text-align: right;
+}
+.simple-table .v-row  {
+    border: 1px solid rgb(100, 100, 100);
+}
+
+.clickable {
+    cursor: pointer;
 }
 </style>
