@@ -64,92 +64,72 @@
     </v-dialog>
 </template>
 
-<script>
-import { ref, computed, reactive, watch } from 'vue';
-import { useAppStore } from '@/store/app';
+<script setup>
+    import { ref, computed, reactive, watch } from 'vue';
+    import { useAppStore } from '@/store/app';
 
-export default {
-    props: {
+    const props = defineProps({
         open: {
             type: Boolean,
             default: false
         }
-    },
-    setup(props, { emit }) {
-        const dialog = ref(false);
-        const newItemDialog = ref(false);
-        const selectedItems = ref([]);
-        const newItem = reactive({
-            name: "",
-            category: ""
-        })
+    });
+    const emit = defineEmits(["close"])
 
-        const app = useAppStore();
-        const itemsPerCat = computed(() => {
-            const obj = {};
-            app.categories.forEach(cat => {
-                obj[cat] = filter(cat);
-            });
-            return obj;
+    const dialog = ref(false);
+    const newItemDialog = ref(false);
+    const selectedItems = ref([]);
+    const newItem = reactive({
+        name: "",
+        category: ""
+    })
+
+    const app = useAppStore();
+    const itemsPerCat = computed(() => {
+        const obj = {};
+        app.categories.forEach(cat => {
+            obj[cat] = filter(cat);
         });
-        function filter(category) {
-            return app.products.filter(d => {
-                return d.category === category &&
-                    !app.shoppingListIncludes(d.name)
-            });
-        }
+        return obj;
+    });
+    function filter(category) {
+        return app.products.filter(d => {
+            return d.category === category &&
+                !app.shoppingListIncludes(d.name)
+        });
+    }
 
-        function addNewItem() {
-            if (newItem.name && newItem.category) {
-                items.push({
-                    name: newItem.name,
-                    category: newItem.category,
-                    icon: "mdi-food"
-                })
-                newItemDialog.value = false;
-                newItem.name = "";
-                newItem.category = "";
-            }
+    function addNewItem() {
+        if (newItem.name && newItem.category) {
+            items.push({
+                name: newItem.name,
+                category: newItem.category,
+                icon: "mdi-food"
+            })
+            newItemDialog.value = false;
+            newItem.name = "";
+            newItem.category = "";
         }
-        function openNewItemDialog(category) {
-            newItem.category = category;
-            newItemDialog.value = true;
-        }
+    }
 
-        function closeDialog() {
-            dialog.value = false;
+    function closeDialog() {
+        dialog.value = false;
+        emit("close");
+    }
+    function checkDialog() {
+        if (!dialog.value) {
             emit("close");
         }
-        function checkDialog() {
-            if (!dialog.value) {
-                emit("close");
-            }
-        }
-        function addItems() {
-            app.addItemsToShoppingList(app.products.filter(d => selectedItems.value.includes(d.name)))
-            dialog.value = false;
-            emit("close");
-        }
+    }
+    function addItems() {
+        app.addItemsToShoppingList(app.products.filter(d => selectedItems.value.includes(d.name)))
+        dialog.value = false;
+        emit("close");
+    }
 
-        watch(() => props.open, () => {
-            if (props.open) {
-                dialog.value = true;
-            }
-        })
-
-        return {
-            selectedItems,
-            dialog,
-            newItemDialog,
-            newItem,
-            itemsPerCat,
-            addNewItem,
-            openNewItemDialog,
-            addItems,
-            closeDialog,
-            checkDialog
+    watch(() => props.open, () => {
+        if (props.open) {
+            dialog.value = true;
         }
-    },
-    emits: ["close"],
-}
+    })
 </script>

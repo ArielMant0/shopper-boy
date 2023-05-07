@@ -1,13 +1,13 @@
 <template>
     <div class="main">
         <div class="wrapper">
-            <ItemList/>
+            <ShoppingList/>
         </div>
     </div>
 </template>
 
 <script setup>
-    import ItemList from '@/components/ItemList.vue';
+    import ShoppingList from '@/components/ShoppingList.vue';
     import { useAppStore } from '@/store/app';
     import useLoader from '@/use/loader';
     import { onMounted } from 'vue';

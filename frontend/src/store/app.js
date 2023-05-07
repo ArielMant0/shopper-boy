@@ -13,6 +13,7 @@ export const useAppStore = defineStore('app', {
                 amount: "4",
                 unit: "Stk.",
                 priceEstimate: 2.42,
+                price: 2.42,
                 cart: true,
                 category: "Obst"
             },
@@ -22,6 +23,7 @@ export const useAppStore = defineStore('app', {
                 unit: "Stk.",
                 cart: false,
                 priceEstimate: 0.99,
+                price: 0.99,
                 category: "Obst"
             },
             {
@@ -30,6 +32,7 @@ export const useAppStore = defineStore('app', {
                 unit: "Stk.",
                 cart: false,
                 priceEstimate: 1.08,
+                price: 1.08,
                 category: "Gemüse"
             },
         ],
@@ -46,6 +49,15 @@ export const useAppStore = defineStore('app', {
             });
             return obj;
         },
+        itemsPerCategoryInCart: (state) => {
+            const obj = {};
+            state.categories.forEach(cat => {
+                obj[cat] = state.shoppingList.filter(d => {
+                    return d.category === cat && d.cart
+                });
+            });
+            return obj;
+        },
         itemsPerCategoryVisible: (state) => {
             const obj = {};
             state.categories.forEach(cat => {
@@ -55,7 +67,10 @@ export const useAppStore = defineStore('app', {
             });
             return obj;
         },
-        priceEstimate: (state) => {
+        price: (state) => {
+            return state.shoppingList.reduce((acc, d) => acc+(d.cart ? d.price : 0), 0)
+        },
+        priceEstimateTotal: (state) => {
             return state.shoppingList.reduce((acc, d) => acc+d.priceEstimate, 0)
         },
         selectedWeek: (state) => {
@@ -74,6 +89,7 @@ export const useAppStore = defineStore('app', {
             if (item.unit === undefined) item.unit = "Stk."
             if (item.amount === undefined) item.amount = 1
             if (item.priceEstimate === undefined) item.priceEstimate = 0.99
+            if (item.price === undefined) item.price = item.priceEstimate;
             if (item.category === undefined) item.category = "Sonstiges"
             if (item.cart === undefined) item.cart = false
             this.shoppingList.push(item)

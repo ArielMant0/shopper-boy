@@ -1,0 +1,78 @@
+<template>
+    <div class="mt-4">
+        <v-toolbar density="compact">
+            <v-toolbar-title class="text-overline">
+                Est. Price: <b>{{ priceEstimateTotal.toFixed(2) }} €</b>
+            </v-toolbar-title>
+            <v-spacer/>
+            <v-btn @click="showAll = !showAll"
+                :icon="showAll ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
+                variant="text" rounded="0"/>
+            <v-btn @click="itemDialog = true"
+                icon="mdi-playlist-plus"
+                variant="text" rounded="0"/>
+            <v-btn @click="addReceipt"
+                icon="mdi-receipt-text-plus-outline"
+                variant="text" rounded="0"/>
+        </v-toolbar>
+
+        <ItemList :items="items" min-width="50vw"/>
+
+        <div class="mt-2 d-flex justify-end">
+            <v-btn @click="receiptDialog = true">add receipt</v-btn>
+        </div>
+
+        <ItemSelector :open="itemDialog" @close="itemDialog = false"/>
+        <ReceiptDialog :open="receiptDialog" @close="receiptDialog = false"/>
+    </div>
+</template>
+
+<script setup>
+    /**
+     * {
+     *   name: ".."
+     *   priceEstimate: >0,
+     *   amount: >0,
+     *   cart: false,
+     *   category: ".."
+     * }
+     */
+    import { ref, computed } from 'vue';
+    import ItemSelector from '@/components/ItemSelector.vue';
+    import ItemList from './ItemList.vue';
+    import ReceiptDialog from '@/components/ReceiptDialog.vue';
+    import { useAppStore } from '@/store/app';
+    import { storeToRefs } from 'pinia';
+
+    const app = useAppStore();
+    const { priceEstimateTotal } = storeToRefs(app);
+
+    const itemDialog = ref(false);
+    const receiptDialog = ref(false);
+    const showAll = ref(true);
+
+    const items = computed(() => {
+        return showAll.value ?
+            app.itemsPerCategory :
+            app.itemsPerCategoryVisible
+    })
+
+    // TODO
+    function addReceipt() {}
+
+</script>
+
+<style scoped>
+.item-in-cart {
+    color: #888;
+}
+</style>
+
+<style>
+.amount {
+    display: flex;
+}
+.amount > * {
+    max-width: 75px;
+}
+</style>
