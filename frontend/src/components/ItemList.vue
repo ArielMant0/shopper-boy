@@ -8,7 +8,7 @@
                 :key="item.name"
                 :class="highlightInCart && item.cart ? ' item-in-cart' : ''">
 
-                <slot :item="item">
+                <slot name="item-content" :item="item">
                     <v-list-item-title class="text-caption">{{ item.name }}</v-list-item-title>
                 </slot>
 

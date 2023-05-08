@@ -148,6 +148,39 @@ def products():
             results.append(obj)
     return jsonify(results)
 
+@bp.route("/receipt", methods=["GET", "POST"])
+def receipt():
+    if request.method == "POST":
+        # add a new receipt
+        items = request.form.getlist("items")
+        if items is None:
+            return jsonify({ "error": "receipt is missing items" })
+
+        price = request.form.get("price")
+        if price is None:
+            return jsonify({ "error": "receipt is missing a price" })
+
+        date = request.form.get("date", datetime.date.today())
+        store_chain = request.form.get("store_chain", "EDEKA")
+        store_address = request.form.get("store_chain", "Hauptstr. 5, 70563 Stuttgart")
+
+
+    # else:
+        # get a specific receipt
+
+@bp.get("/brandproducts")
+def brandproducts():
+    product = request.args.get("product")
+    name = request.args.get("name")
+    query = db.select(am.BrandProduct)
+    if name is not None:
+        query.filter(am.BrandProduct.name.ilike(name))
+    if product is not None:
+        query.join(am.Product).filter_by(name=product)
+
+    bps = db.session.execute(query).scalars()
+    return jsonify([utils.orm_to_dict(d) for d in bps])
+
 @bp.get("/recipes")
 def recipes():
     recipes = db.session.execute(db.select(am.Recipe)).scalars()

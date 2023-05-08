@@ -19,7 +19,7 @@
         <ItemList :items="items" min-width="50vw"/>
 
         <div class="mt-2 d-flex justify-end">
-            <v-btn @click="receiptDialog = true">add receipt</v-btn>
+            <v-btn @click="receiptDialog = true">bon speichern</v-btn>
         </div>
 
         <ItemSelector :open="itemDialog" @close="itemDialog = false"/>

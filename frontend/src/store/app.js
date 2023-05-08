@@ -15,7 +15,8 @@ export const useAppStore = defineStore('app', {
                 priceEstimate: 2.42,
                 price: 2.42,
                 cart: true,
-                category: "Obst"
+                category: "Obst",
+                product: "",
             },
             {
                 name: "Birne",
@@ -24,7 +25,8 @@ export const useAppStore = defineStore('app', {
                 cart: false,
                 priceEstimate: 0.99,
                 price: 0.99,
-                category: "Obst"
+                category: "Obst",
+                product: "",
             },
             {
                 name: "Zucchini",
@@ -33,7 +35,8 @@ export const useAppStore = defineStore('app', {
                 cart: false,
                 priceEstimate: 1.08,
                 price: 1.08,
-                category: "Gemüse"
+                category: "Gemüse",
+                product: "",
             },
         ],
         categories: [],
@@ -90,6 +93,7 @@ export const useAppStore = defineStore('app', {
             if (item.amount === undefined) item.amount = 1
             if (item.priceEstimate === undefined) item.priceEstimate = 0.99
             if (item.price === undefined) item.price = item.priceEstimate;
+            if (item.product === undefined) item.product = "";
             if (item.category === undefined) item.category = "Sonstiges"
             if (item.cart === undefined) item.cart = false
             this.shoppingList.push(item)
