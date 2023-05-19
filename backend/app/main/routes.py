@@ -36,6 +36,19 @@ def get_monthly_expenses(date):
         (am.Expense.date_end.isnot(None) & (am.Expense.date_start <= date) & (am.Expense.date_end >= date))
     )).scalars()
 
+def get_brand_products(name, product, category, limit):
+    query = db.select(am.BrandProduct)
+    if name is not None:
+        query = query.filter(am.BrandProduct.name.ilike(name))
+    if product is not None:
+        query = query.join(am.Product).filter_by(name=product)
+    if category is not None:
+        query = query.join(am.ProductCategory).filter_by(name=category)
+    if limit is not None:
+        query = query.limit(limit)
+
+    return db.session.execute(query).scalars()
+
 @bp.get("/balance")
 def balance():
 
@@ -156,29 +169,90 @@ def receipt():
         if items is None:
             return jsonify({ "error": "receipt is missing items" })
 
-        price = request.form.get("price")
-        if price is None:
-            return jsonify({ "error": "receipt is missing a price" })
+        price = 0
+        for i in items:
+            price += i["price"]
 
-        date = request.form.get("date", datetime.date.today())
+        date = request.form.get("date", datetime.datetime.now(datetime.timezone.utc))
+        dt = request.form.get("datetime")
+        if dt is None:
+            dt = datetime.datetime(date, datetime.time(18))
+        else:
+            dt = datetime.fromtimestamp(dt, tz=datetime.timezone.utc)
+
         store_chain = request.form.get("store_chain", "EDEKA")
         store_address = request.form.get("store_chain", "Hauptstr. 5, 70563 Stuttgart")
 
+        expense = am.Expense(name="Einkauf", value=price, date_start=date)
+        receipt = am.Receipt(
+            datetime=dt,
+            store_chain=store_chain,
+            store_address=store_address,
+            expense=expense
+        )
+        db.session.add(expense)
+        db.session.add(receipt)
+
+        r_items = []
+        for i in items:
+            bp_obj = db.session.execute(db.select(am.BrandProduct).filter_by(name=i["product"])).scalar()
+            if bp_obj:
+                r_items.append(am.ReceiptItem(
+                    unit=i["unit"], price=i["price"], amount=i["amount"],
+                    brand_product=bp_obj, receipt=receipt
+                ))
+
+        db.session.add_all(r_items)
+        db.session.commit()
 
     # else:
         # get a specific receipt
 
-@bp.get("/brandproducts")
-def brandproducts():
+@bp.route("/brandproduct", methods=["GET", "POST"])
+def brandproduct():
+
     product = request.args.get("product")
     name = request.args.get("name")
-    query = db.select(am.BrandProduct)
-    if name is not None:
-        query.filter(am.BrandProduct.name.ilike(name))
-    if product is not None:
-        query.join(am.Product).filter_by(name=product)
+    category = request.args.get("category")
 
-    bps = db.session.execute(query).scalars()
+    if request.method == "GET":
+        bp = get_brand_products(name, product)
+        return jsonify(utils.orm_to_dict(bp[0]) if bp else { "error": "brand product does not exist" })
+    else:
+        if name is None or product is None:
+            return jsonify({ "error": "missing name or product (category)" })
+
+        p_obj = db.session.execute(db.select(am.Product).filter_by(name=product)).scalar()
+
+        if p_obj is None:
+            if category is None:
+                return jsonify({ "error": "cannot create product - missing category" })
+
+            c_obj = db.session.execute(db.select(am.ProductCategory).filter_by(name=category)).scalar()
+            if c_obj is None:
+                c_obj = am.ProductCategory(name=category)
+                db.session.add(c_obj)
+            p_obj = am.Product(name=product, category=c_obj)
+            db.session.add(p_obj)
+
+        bp = am.BrandProduct(name=name, product=p_obj)
+        db.session.add(bp)
+        db.session.commit()
+
+        return jsonify(utils.orm_to_dict(bp))
+
+@bp.get("/brandproducts")
+def brandproducts():
+
+    product = request.args.get("product")
+    name = request.args.get("name")
+    category = request.args.get("category")
+    limit = request.args.get("limit")
+    if limit is not None:
+        limit = int(limit)
+
+    bps = get_brand_products(name, product, category, limit)
+
     return jsonify([utils.orm_to_dict(d) for d in bps])
 
 @bp.get("/recipes")

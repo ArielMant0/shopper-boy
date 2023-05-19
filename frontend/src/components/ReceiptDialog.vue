@@ -50,7 +50,6 @@
     import ItemList from './ItemList.vue';
     import BrandProductSelector from './BrandProductSelector.vue';
 
-
     const app = useAppStore();
     const { itemsPerCategoryInCart, price } = storeToRefs(app)
     const props = defineProps({

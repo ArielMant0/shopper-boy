@@ -21,7 +21,8 @@
         <v-card title="Produkt hinzufügen">
 
             <v-card-text>
-                <v-text-field label="Name"/>
+                <v-text-field label="Name" v-model="newBrandProduct"/>
+                <v-progress-linear v-if="loading" indeterminate/>
             </v-card-text>
 
             <v-card-actions>
@@ -37,7 +38,7 @@
 
 <script setup>
 
-    import { ref, watch } from 'vue';
+    import { ref, watch, onMounted } from 'vue';
     import useLoader from '@/use/loader';
 
     const loader = useLoader();
@@ -54,23 +55,54 @@
 
     const loading = ref(false);
     const search = ref("");
-    const products = ref([props.item.product]);
+    const products = ref([]);
 
     const dialog = ref(false);
+    const newBrandProduct = ref("");
 
     function queryBrandProducts(name) {
         loading.value = true;
         loader.get("/brandproducts", { product: props.item.name, name: name })
             .then(list => {
-                products.value = list;
-                console.log(list)
+                products.value = list.map(d => d.name);
                 loading.value = false;
             })
     }
     // TODO
     function addBrandProduct() {
-
+        if (newBrandProduct.value.length > 0) {
+            loading.value = true;
+            const params = {
+                product: props.item.name,
+                category: props.item.category,
+                name: newBrandProduct.value
+            }
+            // create if it does not exist
+            loader.post("/brandproduct", null, params)
+                .then(data => {
+                    loading.value = false;
+                    dialog.value = false;
+                    if (data.error) {
+                        console.error(data.error)
+                    } else {
+                        props.item.product = data.name;
+                    }
+                })
+        }
     }
+
+
+    onMounted(function() {
+        const params = {
+            product: props.item.name,
+            category: props.item.category,
+        }
+        loader.get("/brandproducts", params)
+            .then(list => {
+                products.value = list.map(d => d.name)
+                if (list.length > 0) props.item.product = products.value[0]
+            })
+    })
 
     watch(search, function() {
         if (search.value) {
