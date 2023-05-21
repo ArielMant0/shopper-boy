@@ -115,6 +115,10 @@ def delete_sth(what):
         id = request.args.get("id")
         db.session.execute(db.delete(am.Expense).filter_by(id=id))
         db.session.commit()
+    elif what == "shopping":
+        id = request.args.get("id")
+        db.session.execute(db.delete(am.ShoppingItem).filter_by(id=id))
+        db.session.commit()
 
     return jsonify({ "success": 1 })
 
@@ -201,7 +205,7 @@ def receipt():
             datetime=dt,
             store_chain=store_chain,
             store_address=store_address,
-            expense=expense
+            expense_id=expense.id
         )
         all_db_items.append(expense)
         all_db_items.append(receipt)
@@ -212,14 +216,14 @@ def receipt():
                 if bp_obj:
                     all_db_items.append(am.ReceiptItem(
                         unit=i["unit"], price=i["price"], amount=i["amount"],
-                        brand_product=bp_obj, receipt=receipt
+                        brand_product_id=bp_obj.id, receipt_id=receipt.id
                     ))
             elif "name" in i and len(i["name"]) > 0:
                 p_obj = db.session.execute(db.select(am.Product).filter_by(name=i["name"])).scalar()
                 if p_obj:
                     all_db_items.append(am.ReceiptItem(
                         unit=i["unit"], price=i["price"], amount=i["amount"],
-                        product=p_obj, receipt=receipt
+                        product_id=p_obj.id, receipt_id=receipt.id
                     ))
 
 
@@ -254,10 +258,10 @@ def brandproduct():
             if c_obj is None:
                 c_obj = am.ProductCategory(name=category)
                 db.session.add(c_obj)
-            p_obj = am.Product(name=product, category=c_obj)
+            p_obj = am.Product(name=product, category_id=c_obj.id)
             db.session.add(p_obj)
 
-        bp = am.BrandProduct(name=name, product=p_obj)
+        bp = am.BrandProduct(name=name, product_id=p_obj.id)
         db.session.add(bp)
         db.session.commit()
 
@@ -281,6 +285,62 @@ def brandproducts():
 def recipes():
     recipes = db.session.execute(db.select(am.Recipe)).scalars()
     return jsonify([utils.orm_to_dict(r) for r in recipes])
+
+@bp.route("/shopping", methods=["GET", "POST"])
+def shopping_list():
+    if request.method == "GET":
+        items = db.session.execute(db.select(am.ShoppingItem)).scalars()
+        json_items = []
+        for i in items:
+            cat = ""
+            if i.brand_product:
+                cat = i.brand_product.product.category.name
+            else:
+                cat = i.product.category.name
+
+            obj = {
+                "id": i.id,
+                "name": i.brand_product.name if i.brand_product else i.product.name,
+                "product": i.brand_product.name if i.brand_product else "",
+                "price": i.price,
+                "unit": i.unit,
+                "amount": i.amount,
+                "currency": i.currency.name,
+                "category": cat
+            }
+            json_items.append(obj)
+        return jsonify(json_items)
+    else:
+        data = json.loads(request.data)
+        items = data["items"] if "items" in data else []
+
+        if len(items) > 0:
+            item_objs = []
+            for i in items:
+                use_bp = "product" in i and len(i["product"]) > 0
+                if use_bp:
+                    p_obj = db.session.execute(db.select(am.BrandProduct).filter_by(name=i["product"])).scalar()
+                else:
+                    p_obj = db.session.execute(db.select(am.Product).filter_by(name=i["name"])).scalar()
+
+                if p_obj is None:
+                    continue
+
+                if use_bp:
+                    item_objs.append(am.ShoppingItem(
+                        unit=i["unit"], price=i["price"],
+                        amount=i["amount"], brand_product_id=p_obj.id
+                    ))
+                else:
+                    item_objs.append(am.ShoppingItem(
+                        unit=i["unit"], price=i["price"],
+                        amount=i["amount"], product_id=p_obj.id
+                    ))
+            db.session.add_all(item_objs)
+            db.session.commit()
+
+            return jsonify({ "count": len(item_objs) })
+
 
 @bp.get("/weekly-plan")
 def weekly_plan():

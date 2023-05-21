@@ -11,7 +11,10 @@ class BrandProduct(db.Model):
     name = db.Column(db.String(60), nullable=False)
     price_in_kg = db.Column(db.Float, default=0.0)
     price_in_pp = db.Column(db.Float, default=0.0)
+
     product_id = db.Column(db.Integer, db.ForeignKey(Product.id, ondelete="CASCADE"))
 
-    receipt_items = db.relationship("ReceiptItem", backref="brand_products")
-    shopping_items = db.relationship("ShoppingItem", backref="brand_products")
+    product = db.relationship("Product", backref="brand_products")
+
+    _receipt_items = db.relationship("ReceiptItem", backref="brand_products")
+    _shopping_items = db.relationship("ShoppingItem", backref="brand_products")

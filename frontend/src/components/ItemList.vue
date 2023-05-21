@@ -44,7 +44,7 @@
                             :color="item.cart ? 'success' : 'default'"
                             :icon="item.cart ? 'mdi-cart-check' : 'mdi-cart-plus'"
                             variant="plain" rounded="0"/>
-                        <v-btn @click="removeItem(item.name)"
+                        <v-btn @click="removeItem(item)"
                             size="small"
                             color="error"
                             icon="mdi-playlist-remove"
@@ -63,6 +63,8 @@
 
     const app = useAppStore();
     const { units } = storeToRefs(app);
+
+    const emit = defineEmits(["remove"])
 
     const props = defineProps({
         items: {
@@ -86,8 +88,8 @@
     function toggleCartStatus(item) {
         item.cart = !item.cart;
     }
-    function removeItem(name) {
-        app.removeItemFromShoppingList(name);
+    function removeItem(item) {
+        emit("remove", item)
     }
 
 </script>

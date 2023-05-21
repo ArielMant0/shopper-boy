@@ -16,3 +16,8 @@ class ReceiptItem(db.Model):
     brand_product_id = db.Column(db.Integer, db.ForeignKey(BrandProduct.id), nullable=True)
     product_id = db.Column(db.Integer, db.ForeignKey(Product.id), nullable=True)
     receipt_id = db.Column(db.Integer, db.ForeignKey(Receipt.id, ondelete='CASCADE'))
+
+    brand_product = db.relationship("BrandProduct", backref="receipt_items")
+    product = db.relationship("Product", backref="receipt_items")
+    receipt = db.relationship("Receipt", backref="receipt_items")
+

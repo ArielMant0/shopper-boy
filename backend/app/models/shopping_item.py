@@ -15,3 +15,5 @@ class ShoppingItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey(Product.id), nullable=True)
     brand_product_id = db.Column(db.Integer, db.ForeignKey(BrandProduct.id), nullable=True)
 
+    product = db.relationship("Product", backref="shopping_items")
+    brand_product = db.relationship("BrandProduct", backref="shopping_items")

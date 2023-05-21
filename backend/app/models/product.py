@@ -11,6 +11,8 @@ class Product(db.Model):
     name = db.Column(db.String(60), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey(ProductCategory.id, ondelete="CASCADE"))
 
-    brand_products = db.relationship("BrandProduct", backref="products", cascade="all, delete")
-    receipt_items = db.relationship("ReceiptItem", backref="products", cascade="all, delete")
-    shopping_items = db.relationship("ShoppingItem", backref="products", cascade="all, delete")
+    category = db.relationship("ProductCategory", backref="products")
+
+    _brand_products = db.relationship("BrandProduct", backref="products", cascade="all, delete")
+    _receipt_items = db.relationship("ReceiptItem", backref="products", cascade="all, delete")
+    _shopping_items = db.relationship("ShoppingItem", backref="products", cascade="all, delete")

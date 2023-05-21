@@ -67,6 +67,7 @@
 <script setup>
     import { ref, computed, reactive, watch } from 'vue';
     import { useAppStore } from '@/store/app';
+    import useLoader from '@/use/loader';
 
     const props = defineProps({
         open: {
@@ -74,7 +75,8 @@
             default: false
         }
     });
-    const emit = defineEmits(["close"])
+    const emit = defineEmits(["close", "update"])
+    const loader = useLoader();
 
     const dialog = ref(false);
     const newItemDialog = ref(false);
@@ -122,9 +124,15 @@
         }
     }
     function addItems() {
-        app.addItemsToShoppingList(app.products.filter(d => selectedItems.value.includes(d.name)))
         dialog.value = false;
         emit("close");
+        app.addItemsToShoppingList(app.products.filter(d => selectedItems.value.includes(d.name)))
+        const items = app.products.filter(d => selectedItems.value.includes(d.name));
+        loader.post("/shopping", { items: items })
+            .then(response => {
+                console.log(response)
+                emit("update");
+            })
     }
 
     watch(() => props.open, () => {

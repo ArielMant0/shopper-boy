@@ -16,13 +16,13 @@
                 variant="text" rounded="0"/>
         </v-toolbar>
 
-        <ItemList :items="items" min-width="50vw"/>
+        <ItemList :items="items" min-width="50vw" @remove="removeItem"/>
 
         <div class="mt-2 d-flex justify-end">
             <v-btn @click="receiptDialog = true">bon speichern</v-btn>
         </div>
 
-        <ItemSelector :open="itemDialog" @close="itemDialog = false"/>
+        <ItemSelector :open="itemDialog" @close="itemDialog = false" @update="loadItems"/>
         <ReceiptDialog :open="receiptDialog" @close="receiptDialog = false"/>
     </div>
 </template>
@@ -37,15 +37,18 @@
      *   category: ".."
      * }
      */
-    import { ref, computed } from 'vue';
+    import { ref, computed, onMounted } from 'vue';
     import ItemSelector from '@/components/ItemSelector.vue';
     import ItemList from './ItemList.vue';
     import ReceiptDialog from '@/components/ReceiptDialog.vue';
     import { useAppStore } from '@/store/app';
     import { storeToRefs } from 'pinia';
+    import useLoader from '@/use/loader';
 
     const app = useAppStore();
     const { priceEstimateTotal } = storeToRefs(app);
+
+    const loader = useLoader();
 
     const itemDialog = ref(false);
     const receiptDialog = ref(false);
@@ -57,8 +60,21 @@
             app.itemsPerCategoryVisible
     })
 
+    function loadItems() {
+        loader.get("/shopping")
+            .then(data => app.setShoppingListItems(data))
+    }
+    function removeItem(item) {
+        loader.post("/delete/shopping", null, { id: item.id })
+            .then(response => {
+                app.removeItemFromShoppingList(item.id)
+            })
+    }
+
     // TODO
     function addReceipt() {}
+
+    onMounted(loadItems)
 
 </script>
 

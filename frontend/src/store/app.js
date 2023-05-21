@@ -88,6 +88,12 @@ export const useAppStore = defineStore('app', {
     },
 
     actions: {
+
+        setShoppingListItems (items) {
+            this.shoppingList = [];
+            this.addItemsToShoppingList(items);
+        },
+
         addItemToShoppingList(item) {
             if (item.unit === undefined) item.unit = "Stk."
             if (item.amount === undefined) item.amount = 1
@@ -95,6 +101,7 @@ export const useAppStore = defineStore('app', {
             if (item.price === undefined) item.price = item.priceEstimate;
             if (item.product === undefined) item.product = "";
             if (item.category === undefined) item.category = "Sonstiges"
+            if (item.currency === undefined) item.currency = "€"
             if (item.cart === undefined) item.cart = false
             this.shoppingList.push(item)
         },
@@ -103,8 +110,8 @@ export const useAppStore = defineStore('app', {
             items.forEach(d => this.addItemToShoppingList(d))
         },
 
-        removeItemFromShoppingList(name) {
-            const idx = this.shoppingList.findIndex(d => d.name === name)
+        removeItemFromShoppingList(id) {
+            const idx = this.shoppingList.findIndex(d => d.id === id)
             if (idx >= 0) {
                 this.shoppingList.splice(idx, 1);
             }
