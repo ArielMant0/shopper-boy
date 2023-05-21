@@ -1,3 +1,4 @@
+import json
 import datetime
 import calendar
 from flask import jsonify, request
@@ -108,6 +109,15 @@ def income():
 
         return jsonify(utils.orm_to_dict(new_income))
 
+@bp.post("/delete/<what>")
+def delete_sth(what):
+    if what == "expense":
+        id = request.args.get("id")
+        db.session.execute(db.delete(am.Expense).filter_by(id=id))
+        db.session.commit()
+
+    return jsonify({ "success": 1 })
+
 @bp.route("/expense", methods=["GET", "POST"])
 def expense():
     if request.method == "GET":
@@ -164,24 +174,27 @@ def products():
 @bp.route("/receipt", methods=["GET", "POST"])
 def receipt():
     if request.method == "POST":
+        data = json.loads(request.data)
         # add a new receipt
-        items = request.form.getlist("items")
-        if items is None:
+        items = data["items"]
+        if items is None or len(items) == 0:
             return jsonify({ "error": "receipt is missing items" })
 
         price = 0
         for i in items:
             price += i["price"]
 
-        date = request.form.get("date", datetime.datetime.now(datetime.timezone.utc))
-        dt = request.form.get("datetime")
+        date = data["date"] if "date" in data else datetime.date.today()
+        dt = data["datetime"] if "datetime" in data else None
         if dt is None:
-            dt = datetime.datetime(date, datetime.time(18))
+            dt = datetime.datetime.combine(date, datetime.time(18))
         else:
             dt = datetime.fromtimestamp(dt, tz=datetime.timezone.utc)
 
-        store_chain = request.form.get("store_chain", "EDEKA")
-        store_address = request.form.get("store_chain", "Hauptstr. 5, 70563 Stuttgart")
+        store_chain = data["store_chain"] if "store_chain" in data else "EDEKA"
+        store_address = data["store_address"] if "store_address" in data else "Hauptstr. 5, 70563 Stuttgart"
+
+        all_db_items = []
 
         expense = am.Expense(name="Einkauf", value=price, date_start=date)
         receipt = am.Receipt(
@@ -190,21 +203,30 @@ def receipt():
             store_address=store_address,
             expense=expense
         )
-        db.session.add(expense)
-        db.session.add(receipt)
+        all_db_items.append(expense)
+        all_db_items.append(receipt)
 
-        r_items = []
         for i in items:
-            bp_obj = db.session.execute(db.select(am.BrandProduct).filter_by(name=i["product"])).scalar()
-            if bp_obj:
-                r_items.append(am.ReceiptItem(
-                    unit=i["unit"], price=i["price"], amount=i["amount"],
-                    brand_product=bp_obj, receipt=receipt
-                ))
+            if "product" in i and len(i["product"]) > 0:
+                bp_obj = db.session.execute(db.select(am.BrandProduct).filter_by(name=i["product"])).scalar()
+                if bp_obj:
+                    all_db_items.append(am.ReceiptItem(
+                        unit=i["unit"], price=i["price"], amount=i["amount"],
+                        brand_product=bp_obj, receipt=receipt
+                    ))
+            elif "name" in i and len(i["name"]) > 0:
+                p_obj = db.session.execute(db.select(am.Product).filter_by(name=i["name"])).scalar()
+                if p_obj:
+                    all_db_items.append(am.ReceiptItem(
+                        unit=i["unit"], price=i["price"], amount=i["amount"],
+                        product=p_obj, receipt=receipt
+                    ))
 
-        db.session.add_all(r_items)
+
+        db.session.add_all(all_db_items)
         db.session.commit()
 
+        return jsonify(utils.orm_to_dict(receipt))
     # else:
         # get a specific receipt
 

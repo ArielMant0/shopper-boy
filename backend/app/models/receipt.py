@@ -10,6 +10,6 @@ class Receipt(db.Model):
     store_chain = db.Column(db.String, nullable=True)
     store_address = db.Column(db.String, nullable=True)
 
-    expense_id = db.Column(db.Integer, db.ForeignKey(Expense.id))
+    expense_id = db.Column(db.Integer, db.ForeignKey(Expense.id, ondelete='CASCADE'))
 
-    expense = db.relationship("Expense", backref="receipts")
+    receipt_items = db.relationship("ReceiptItem", backref="receipts", cascade="all, delete")

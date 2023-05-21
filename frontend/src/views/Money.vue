@@ -5,7 +5,8 @@
                 :data="data.balance"
                 :details="details"
                 @income-update="loadIncomes"
-                @expense-update="loadExpenses"/>
+                @expense-update="loadExpenses"
+                @update="loadAll"/>
         </div>
     </div>
 </template>
@@ -72,8 +73,7 @@
             })
         })
     }
-
-    onMounted(function() {
+    function loadAll() {
         data.balance = [];
         const prev = app.selectedDate.startOf("month").minus({ month: 1}).toISODate();
         const curr = app.selectedDate.startOf("month").toISODate();
@@ -81,7 +81,9 @@
         loader.get("/balance", { date: curr }).then(d => addBalance(d))
         loadIncomes(false);
         loadExpenses(false);
-    })
+    }
+
+    onMounted(loadAll)
 
 </script>
 

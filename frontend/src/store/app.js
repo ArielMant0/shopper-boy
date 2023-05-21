@@ -122,5 +122,8 @@ export const useAppStore = defineStore('app', {
             this.selectedDate = this.selectedDate.plus(move);
         },
 
+        clearShoppingList() {
+            this.shoppingList = [];
+        }
     }
 })

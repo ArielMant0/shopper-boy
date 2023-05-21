@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.brand_product import BrandProduct
+from app.models.product import Product
 from app.models.receipt import Receipt
 from sqlalchemy_utils import CurrencyType
 
@@ -12,8 +13,6 @@ class ReceiptItem(db.Model):
     price = db.Column(db.Float, default=0.0)
     currency = db.Column(CurrencyType, default="EUR")
 
-    brand_product_id = db.Column(db.Integer, db.ForeignKey(BrandProduct.id))
-    receipt_id = db.Column(db.Integer, db.ForeignKey(Receipt.id))
-
-    brand_product = db.relationship("BrandProduct", backref="receipt_items")
-    receipt = db.relationship("Receipt", backref="receipt_items")
+    brand_product_id = db.Column(db.Integer, db.ForeignKey(BrandProduct.id), nullable=True)
+    product_id = db.Column(db.Integer, db.ForeignKey(Product.id), nullable=True)
+    receipt_id = db.Column(db.Integer, db.ForeignKey(Receipt.id, ondelete='CASCADE'))

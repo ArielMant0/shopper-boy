@@ -13,3 +13,5 @@ class Expense(db.Model):
     date_end = db.Column(db.Date, nullable=True)
     recurrence = db.Column(db.String(15), nullable=True)
     recurrence_value = db.Column(db.Integer, nullable=True)
+
+    receipts = db.relationship("Receipt", backref="expenses", cascade="all, delete")

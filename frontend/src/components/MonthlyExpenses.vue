@@ -148,7 +148,7 @@
         },
     });
 
-    const emit = defineEmits(["income-update", "expense-update"]);
+    const emit = defineEmits(["income-update", "expense-update", "update"]);
 
     const itemsPerPage = ref(10)
 
@@ -257,6 +257,11 @@
     function deleteItem() {
         if (delItem) {
             delDialog.value = false;
+            loader.post("delete/expense", {}, { id: delItem.id })
+                .then(() => {
+                    delDialog.value = false
+                    emit("update")
+                })
         }
     }
 

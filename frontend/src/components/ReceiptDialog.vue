@@ -25,12 +25,7 @@
         </ItemList>
 
         <div class="d-flex justify-end">
-            <span>Summe:
-                <input v-model="finalPrice"
-                    type="number" min="0" step="0.01"
-                    @change="finalPrice = clamp(Number.parseFloat($event.target.value))"
-                    class="pa-1" style="max-width: 75px;"> €
-            </span>
+            <span class="mr-4 mt-4">Summe: {{ clamp(price) }} €</span>
         </div>
 
         </v-card-text>
@@ -49,6 +44,7 @@
     import { storeToRefs } from 'pinia';
     import ItemList from './ItemList.vue';
     import BrandProductSelector from './BrandProductSelector.vue';
+    import useLoader from '@/use/loader';
 
     const app = useAppStore();
     const { itemsPerCategoryInCart, price } = storeToRefs(app)
@@ -60,8 +56,9 @@
     });
     const emit = defineEmits(["close"])
 
+    const loader = useLoader();
+
     const dialog = ref(props.open);
-    const finalPrice = ref(price.value);
 
     function clamp(value) {
         return +value.toFixed(2)
@@ -76,7 +73,19 @@
         }
     }
     function addReceipt() {
-
+        const body = {
+            items: app.shoppingList.filter(d => d.cart)
+        }
+        dialog.value = false;
+        loader.post("receipt", body)
+            .then(response => {
+                if (response.error) {
+                    console.error(response.error)
+                } else {
+                    console.log(response)
+                    app.clearShoppingList();
+                }
+            })
     }
 
     watch(() => props.open, () => {
@@ -84,7 +93,6 @@
             dialog.value = true;
         }
     })
-    watch(price, () => finalPrice.value = price.value);
 
 </script>
 

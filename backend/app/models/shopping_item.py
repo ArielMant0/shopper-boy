@@ -12,8 +12,6 @@ class ShoppingItem(db.Model):
     price = db.Column(db.Float, default=0.0)
     currency = db.Column(CurrencyType, default="EUR")
 
-    product_id = db.Column(db.Integer, db.ForeignKey(Product.id))
-    brand_product_id = db.Column(db.Integer, db.ForeignKey(BrandProduct.id))
+    product_id = db.Column(db.Integer, db.ForeignKey(Product.id), nullable=True)
+    brand_product_id = db.Column(db.Integer, db.ForeignKey(BrandProduct.id), nullable=True)
 
-    product = db.relationship("Product", backref="shopping_items")
-    brand_product = db.relationship("BrandProduct", backref="shopping_items")
