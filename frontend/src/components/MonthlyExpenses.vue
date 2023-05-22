@@ -58,6 +58,8 @@
 
                 <template v-slot:item.id="{ item }">
                     <div class="d-flex justify-end">
+                        <!-- TODO -->
+                        <v-icon v-if="item.raw.receipt" size="small" class="clickable ml-1">mdi-text-box-search-outline</v-icon>
                         <v-icon v-if="item.raw.recurrence" size="small" class="clickable ml-1">mdi-pencil</v-icon>
                         <v-icon size="small" class="clickable ml-1" color="error" @click="setDelete(item.raw)">mdi-delete</v-icon>
                     </div>

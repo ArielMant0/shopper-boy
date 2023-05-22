@@ -1,5 +1,8 @@
 // Composables
 import { createRouter, createWebHistory } from 'vue-router'
+import Money from '@/views/Money.vue'
+import Calendar from '@/views/Calendar.vue'
+import Shopping from '@/views/Shopping.vue'
 
 const routes = [
   {
@@ -12,7 +15,7 @@ const routes = [
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route
         // which is lazy-loaded when the route is visited.
-        component: () => import(/* webpackChunkName: "money" */ '@/views/Money.vue'),
+        component: Money,
       },
     ],
   }, {
@@ -22,7 +25,7 @@ const routes = [
       {
         path: '',
         name: 'Shopping',
-        component: () => import(/* webpackChunkName: "list" */ '@/views/Shopping.vue'),
+        component: Shopping,
       },
     ],
   }, {
@@ -32,7 +35,7 @@ const routes = [
       {
         path: '',
         name: 'Calendar',
-        component: () => import(/* webpackChunkName: "home" */ '@/views/Calendar.vue'),
+        component: Calendar,
       },
     ],
   }

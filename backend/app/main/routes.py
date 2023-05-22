@@ -37,10 +37,13 @@ def get_monthly_expenses(date):
         (am.Expense.date_end.isnot(None) & (am.Expense.date_start <= date) & (am.Expense.date_end >= date))
     )).scalars()
 
-def get_brand_products(name, product, category, limit):
+def get_brand_products(name, product, category=None, limit=None, similar=False):
     query = db.select(am.BrandProduct)
     if name is not None:
-        query = query.filter(am.BrandProduct.name.ilike(name))
+        if similar:
+            query = query.filter(am.BrandProduct.name.contains(name))
+        else:
+            query = query.filter_by(name=name)
     if product is not None:
         query = query.join(am.Product).filter_by(name=product)
     if category is not None:
@@ -240,9 +243,10 @@ def brandproduct():
     product = request.args.get("product")
     name = request.args.get("name")
     category = request.args.get("category")
+    similar = request.args.get("similar", false)
 
     if request.method == "GET":
-        bp = get_brand_products(name, product)
+        bp = get_brand_products(name, product, category, similar=similar)
         return jsonify(utils.orm_to_dict(bp[0]) if bp else { "error": "brand product does not exist" })
     else:
         if name is None or product is None:

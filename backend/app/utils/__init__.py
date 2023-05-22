@@ -65,8 +65,6 @@ def items_from_recurrence_per_month(item, month):
                 result[-1]["date_start"] = date
         date = date + delta
 
-    print(item, result)
-
     return result
 
 def get_day_in_month(date, day):

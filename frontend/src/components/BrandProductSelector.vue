@@ -62,7 +62,7 @@
 
     function queryBrandProducts(name) {
         loading.value = true;
-        loader.get("/brandproducts", { product: props.item.name, name: name })
+        loader.get("/brandproducts", { product: props.item.name, name: name, similar: true, category: props.item.category })
             .then(list => {
                 products.value = list.map(d => d.name);
                 loading.value = false;
