@@ -41,7 +41,7 @@ def get_brand_products(name, product, category=None, limit=None, similar=False):
     query = db.select(am.BrandProduct)
     if name is not None:
         if similar:
-            query = query.filter(am.BrandProduct.name.contains(name))
+            query = query.filter(am.BrandProduct.name.icontains(name))
         else:
             query = query.filter_by(name=name)
     if product is not None:
@@ -118,7 +118,7 @@ def delete_sth(what):
         id = request.args.get("id")
         db.session.execute(db.delete(am.Expense).filter_by(id=id))
         db.session.commit()
-    elif what == "shopping":
+    elif what == "shopping_item":
         id = request.args.get("id")
         db.session.execute(db.delete(am.ShoppingItem).filter_by(id=id))
         db.session.commit()
@@ -166,17 +166,94 @@ def categories():
     categories = db.session.execute(db.select(am.ProductCategory)).scalars()
     return jsonify([r.name for r in categories])
 
+@bp.route("/product", methods=["GET", "POST"])
+def product():
+    if request.method == "POST":
+        name = request.args.get("name")
+        category = request.args.get("category")
+        if not name or not category:
+            return { "error": "missing name or category" }
+
+        cat = db.session.execute(db.select(am.ProductCategory).filter_by(name=category)).scalar()
+        if not cat:
+            cat = am.ProductCategory(name=category)
+            db.session.add(cat)
+
+        obj = am.Product(name=name, category=cat)
+        db.session.add(obj)
+        db.session.commit()
+
+        return jsonify({ "success": "saldals" })
+    else:
+        name = request.args.get("name")
+        category = request.args.get("category")
+        if not name:
+            return { "error": "missing name" }
+
+        query = db.select(am.Product).filter_by(name=name)
+        if category is not None:
+            query = query.join(am.ProductCategory).filter_by(name=category)
+
+        prod = db.session.execute(query).scalar()
+        if prod:
+            return jsonify({
+                "name": prod.name,
+                "category": prod.category.name,
+                "price": 0.99,
+                "unit": "Stk",
+                "amount": 1
+            })
+        return jsonify({ "error": "no matching prodcut found" })
+
 @bp.get("/products")
 def products():
-    products = db.session.execute(db.select(am.Product)).scalars()
+    name = request.args.get("name")
+    category = request.args.get("category")
+    limit = request.args.get("limit")
+    if not name:
+        return { "error": "missing name" }
+
+    query = db.select(am.Product).filter(am.Product.name.contains(name))
+    if category is not None:
+        query = query.join(am.ProductCategory).filter_by(name=category)
+    if limit is not None:
+        query = query.limit(int(limit))
+
+    prods = db.session.execute(query).scalars()
+
     results = []
-    for r in products:
-        obj = utils.orm_to_dict(r)
-        cat = db.session.execute(db.select(am.ProductCategory).filter_by(id=r.category_id)).scalar()
-        if cat:
-            obj["category"] = cat.name
-            results.append(obj)
+    for p in prods:
+        if p.category:
+            results.append({
+                "name": p.name,
+                "category": p.category.name,
+                "price": 0.99,
+                "unit": "Stk",
+                "amount": 1
+            })
+
     return jsonify(results)
+
+@bp.get("/products_list")
+def products_list():
+    categories = db.session.execute(db.select(am.ProductCategory)).scalars()
+    results = []
+    for c in categories:
+        prods = db.session.execute(db.select(am.Product).filter_by(category=c).limit(10)).scalars()
+        for p in prods:
+            # TODO
+            results.append({
+                "name": p.name,
+                "category": c.name,
+                "price": 0.99,
+                "unit": "Stk",
+                "amount": 1
+            })
+    return jsonify(results)
+
+@bp.get("/units")
+def units():
+    return jsonify(["Stk", "g", "kg", "ml", "l", "Msp.", "TL", "EL"])
 
 @bp.route("/receipt", methods=["GET", "POST"])
 def receipt():
@@ -191,12 +268,10 @@ def receipt():
         for i in items:
             price += i["price"]
 
-        date = data["date"] if "date" in data else datetime.date.today()
-        dt = data["datetime"] if "datetime" in data else None
-        if dt is None:
-            dt = datetime.datetime.combine(date, datetime.time(18))
-        else:
-            dt = datetime.fromtimestamp(dt, tz=datetime.timezone.utc)
+        date = datetime.date.fromisoformat(data["date"]) if "date" in data else datetime.date.today()
+        time = datetime.time.fromisoformat(data["time"]) if "time" in data else datetime.time(18)
+        dt = datetime.datetime.combine(date, time)
+        print(dt)
 
         store_chain = data["store_chain"] if "store_chain" in data else "EDEKA"
         store_address = data["store_address"] if "store_address" in data else "Hauptstr. 5, 70563 Stuttgart"
@@ -208,7 +283,7 @@ def receipt():
             datetime=dt,
             store_chain=store_chain,
             store_address=store_address,
-            expense_id=expense.id
+            expense=expense
         )
         all_db_items.append(expense)
         all_db_items.append(receipt)
@@ -219,18 +294,19 @@ def receipt():
                 if bp_obj:
                     all_db_items.append(am.ReceiptItem(
                         unit=i["unit"], price=i["price"], amount=i["amount"],
-                        brand_product_id=bp_obj.id, receipt_id=receipt.id
+                        brand_product=bp_obj, receipt=receipt
                     ))
             elif "name" in i and len(i["name"]) > 0:
                 p_obj = db.session.execute(db.select(am.Product).filter_by(name=i["name"])).scalar()
                 if p_obj:
                     all_db_items.append(am.ReceiptItem(
                         unit=i["unit"], price=i["price"], amount=i["amount"],
-                        product_id=p_obj.id, receipt_id=receipt.id
+                        product=p_obj, receipt=receipt
                     ))
 
 
         db.session.add_all(all_db_items)
+        db.session.execute(db.delete(am.ShoppingItem))
         db.session.commit()
 
         return jsonify(utils.orm_to_dict(receipt))
@@ -243,7 +319,7 @@ def brandproduct():
     product = request.args.get("product")
     name = request.args.get("name")
     category = request.args.get("category")
-    similar = request.args.get("similar", false)
+    similar = request.args.get("similar", False)
 
     if request.method == "GET":
         bp = get_brand_products(name, product, category, similar=similar)
@@ -290,7 +366,7 @@ def recipes():
     recipes = db.session.execute(db.select(am.Recipe)).scalars()
     return jsonify([utils.orm_to_dict(r) for r in recipes])
 
-@bp.route("/shopping", methods=["GET", "POST"])
+@bp.route("/shopping_list", methods=["GET", "POST"])
 def shopping_list():
     if request.method == "GET":
         items = db.session.execute(db.select(am.ShoppingItem)).scalars()
@@ -309,6 +385,7 @@ def shopping_list():
                 "price": i.price,
                 "unit": i.unit,
                 "amount": i.amount,
+                "cart": i.cart,
                 "currency": i.currency.name,
                 "category": cat
             }
@@ -344,6 +421,42 @@ def shopping_list():
             db.session.commit()
 
             return jsonify({ "count": len(item_objs) })
+
+@bp.route("/shopping_item", methods=["GET", "POST"])
+def shopping_item():
+    if request.method == "POST":
+        data = json.loads(request.data)
+
+        # only update if id is present
+        if "id" in data:
+            obj = db.session.execute(db.select(am.ShoppingItem).filter_by(id=data["id"])).scalar()
+            if obj:
+                obj.price = data["price"]
+                obj.cart = data["cart"]
+                obj.amount = data["amount"]
+                obj.unit = data["unit"]
+                # TODO: brand product?
+
+        # otherwise insert
+        else:
+            if "name" not in data:
+                return { "error": "missing product" }
+
+            p_obj = db.session.execute(db.select(am.Product).filter_by(name=data["name"])).scalar()
+            if p_obj is None:
+                return { "error": "product does not exist" }
+
+            obj = am.ShoppingItem(
+                price=data["price"], amount=data["amount"],
+                unit=data["unit"], cart=data["cart"], product=p_obj
+            )
+
+            db.session.add(p_obj)
+            db.session.add(obj)
+
+        db.session.commit()
+
+    return { "success": "hllo" }
 
 
 @bp.get("/weekly-plan")

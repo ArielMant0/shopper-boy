@@ -1,10 +1,16 @@
 <template>
-    <v-dialog
-        v-model="dialog"
-        @update:modelValue="checkDialog"
-        transition="dialog-bottom-transition">
+    <v-dialog v-model="dialog" transition="dialog-bottom-transition">
     <v-card title="Add Items To Shopping List">
         <v-card-text>
+        <v-autocomplete v-model="searchProduct"
+            v-model:search="search"
+            :loading="loading"
+            :items="searchResults"
+            hide-no-data
+            hide-details
+            density="compact"
+            label="Produkt finden ..."
+            class="mb-4"/>
         <v-item-group
             v-model="selectedItems"
             multiple
@@ -13,7 +19,7 @@
             <template v-for="(items, cat) in itemsPerCat">
                 <div class="text-caption">{{ cat }}</div>
                 <div>
-                    <!-- <v-item>
+                    <v-item>
                         <v-btn
                             size="small" color="grey-lighten-1" stacked
                             class="mr-1 mb-1"
@@ -21,7 +27,7 @@
                             <v-icon>mdi-plus</v-icon>
                             <span>new</span>
                         </v-btn>
-                    </v-item> -->
+                    </v-item>
                     <v-item v-for="(item, index) in items" :key="index"
                         :value="item.name"
                         v-slot="{ selectedClass, toggle }">
@@ -41,8 +47,14 @@
             <v-card>
             <v-card-title>Add New Item</v-card-title>
             <v-card-text>
-                <v-text-field v-model="newItem.name" autofocus/>
-                <v-text-field readonly>{{ newItem.category }}</v-text-field>
+                <v-text-field v-model="newItem.name"
+                    class="mb-4" hide-details
+                    label="Name" autofocus
+                    density="compact"/>
+                <v-text-field readonly
+                    class="mb-2" hide-details
+                    density="compact"
+                    :model-value="newItem.category"/>
             </v-card-text>
             <v-card-actions>
                 <v-btn color="error" @click="newItemDialog = false">
@@ -70,15 +82,21 @@
     import useLoader from '@/use/loader';
 
     const props = defineProps({
-        open: {
+        modelValue: {
             type: Boolean,
-            default: false
+            required: true
         }
     });
-    const emit = defineEmits(["close", "update"])
-    const loader = useLoader();
+    const emit = defineEmits(["update:modelValue", "add-to-list", "add-new-item"])
 
-    const dialog = ref(false);
+    const dialog = computed({
+        get() {
+            return props.modelValue
+        },
+        set(value) {
+            emit("update:modelValue", value)
+        }
+    });
     const newItemDialog = ref(false);
     const selectedItems = ref([]);
     const newItem = reactive({
@@ -86,7 +104,14 @@
         category: ""
     })
 
+    const search = ref("")
+    const searchProduct = ref("")
+    const loading = ref(false)
+    const searchResults = ref([]);
+
     const app = useAppStore();
+    const loader = useLoader();
+
     const itemsPerCat = computed(() => {
         const obj = {};
         app.categories.forEach(cat => {
@@ -103,41 +128,41 @@
 
     function addNewItem() {
         if (newItem.name && newItem.category) {
-            items.push({
-                name: newItem.name,
-                category: newItem.category,
-                icon: "mdi-food"
-            })
+            emit("add-new-item", newItem)
             newItemDialog.value = false;
             newItem.name = "";
             newItem.category = "";
         }
     }
+    function openNewItemDialog(category) {
+        newItemDialog.value = true;
+        newItem.name = "";
+        newItem.category = category;
+    }
 
     function closeDialog() {
         dialog.value = false;
-        emit("close");
-    }
-    function checkDialog() {
-        if (!dialog.value) {
-            emit("close");
-        }
     }
     function addItems() {
         dialog.value = false;
-        emit("close");
-        app.addItemsToShoppingList(app.products.filter(d => selectedItems.value.includes(d.name)))
         const items = app.products.filter(d => selectedItems.value.includes(d.name));
-        loader.post("/shopping", { items: items })
-            .then(response => {
-                console.log(response)
-                emit("update");
-            })
+        emit("add-to-list", items.map(d => app.fillItem(d)))
     }
 
-    watch(() => props.open, () => {
-        if (props.open) {
-            dialog.value = true;
+    function loadProduct(name) {
+        // TODO
+    }
+    function queryProducts(name) {
+        loader.get("/products", { name: name })
+            .then(results => searchResults.value = results.map(d => d.name))
+    }
+
+    watch(search, function() {
+        if (search.value) {
+            queryProducts(search.value);
         }
     })
+
+    watch(searchProduct, loadProduct)
+
 </script>

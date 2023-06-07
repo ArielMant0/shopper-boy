@@ -16,8 +16,9 @@
     const loader = useLoader()
 
     function init() {
-        loader.get("categories").then(cats => app.categories = cats);
-        loader.get("products").then(prods => app.products = prods);
+        loader.get("/categories").then(cats => app.categories = cats);
+        loader.get("/products_list").then(prods => app.products = prods);
+        loader.get("/units").then(units => app.units = units);
     }
     onMounted(init)
 

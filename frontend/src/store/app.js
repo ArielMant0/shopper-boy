@@ -41,7 +41,7 @@ export const useAppStore = defineStore('app', {
         ],
         categories: [],
         products: [],
-        units: ["Stk.", "g", "kg", "EL", "TL", "Msp"]
+        units: []
     }),
 
     getters: {
@@ -89,12 +89,7 @@ export const useAppStore = defineStore('app', {
 
     actions: {
 
-        setShoppingListItems (items) {
-            this.shoppingList = [];
-            this.addItemsToShoppingList(items);
-        },
-
-        addItemToShoppingList(item) {
+        fillItem(item) {
             if (item.unit === undefined) item.unit = "Stk."
             if (item.amount === undefined) item.amount = 1
             if (item.priceEstimate === undefined) item.priceEstimate = 0.99
@@ -103,7 +98,16 @@ export const useAppStore = defineStore('app', {
             if (item.category === undefined) item.category = "Sonstiges"
             if (item.currency === undefined) item.currency = "€"
             if (item.cart === undefined) item.cart = false
-            this.shoppingList.push(item)
+            return item
+        },
+
+        setShoppingListItems (items) {
+            this.shoppingList = [];
+            this.addItemsToShoppingList(items);
+        },
+
+        addItemToShoppingList(item) {
+            this.shoppingList.push(this.fillItem(item))
         },
 
         addItemsToShoppingList(items) {

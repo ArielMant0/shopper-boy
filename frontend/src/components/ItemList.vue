@@ -16,12 +16,12 @@
                     <slot name="item-prepend" :item="item">
                         <div class="amount">
                             <input type="number" min="0"
-                                @change="item.amount = Number.parseFloat($event.target.value)"
+                                @change="setAttr('amount', item, Number.parseFloat($event.target.value))"
                                 class="pa-1 text-caption"
                                 :value="item.amount"
                                 style="max-width:45px;">
                             <select :value="item.unit"
-                                @change="item.unit = $event.target.value"
+                                @change="setAttr('unit', item, $event.target.value)"
                                 class="mr-2 text-caption bg-surface"
                                 style="cursor: pointer;">
                                 <option v-for="unit in units" class="text-caption" :value="unit">
@@ -36,10 +36,14 @@
                     <slot name="item-append" :item="item">
                         <span class="text-caption">
                             <v-icon size="x-small">mdi-approximately-equal</v-icon>
-                            {{ item.priceEstimate }}
+                            <input type="number" min="0"
+                                :value="item.priceEstimate"
+                                @change="setAttr('price', item, clamp(Number.parseFloat($event.target.value)));"
+                                class="pa-1 text-caption"
+                                style="max-width:60px;">
                             €
                         </span>
-                        <v-btn @click="toggleCartStatus(item)"
+                        <v-btn @click="setAttr('cart', item, !item.cart)"
                             class="pa-0" size="small"
                             :color="item.cart ? 'success' : 'default'"
                             :icon="item.cart ? 'mdi-cart-check' : 'mdi-cart-plus'"
@@ -64,7 +68,7 @@
     const app = useAppStore();
     const { units } = storeToRefs(app);
 
-    const emit = defineEmits(["remove"])
+    const emit = defineEmits(["update-item", "remove-item"])
 
     const props = defineProps({
         items: {
@@ -85,11 +89,18 @@
         },
     });
 
-    function toggleCartStatus(item) {
-        item.cart = !item.cart;
+    function clamp(value) {
+        return +value.toFixed(2)
+    }
+    function setAttr(attr, item, value) {
+        item[attr] = value;
+        if (attr === "price") {
+            item.priceEstimate = value;
+        }
+        emit("update-item", item);
     }
     function removeItem(item) {
-        emit("remove", item)
+        emit("remove-item", item)
     }
 
 </script>

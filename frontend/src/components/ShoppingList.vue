@@ -2,7 +2,7 @@
     <div class="mt-4">
         <v-toolbar density="compact">
             <v-toolbar-title class="text-overline">
-                Est. Price: <b>{{ priceEstimateTotal.toFixed(2) }} €</b>
+                Price: <b>{{ priceEstimateTotal.toFixed(2) }} €</b>
             </v-toolbar-title>
             <v-spacer/>
             <v-btn @click="showAll = !showAll"
@@ -16,27 +16,21 @@
                 variant="text" rounded="0"/>
         </v-toolbar>
 
-        <ItemList :items="items" min-width="50vw" @remove="removeItem"/>
+        <ItemList :items="items" min-width="50vw"
+            @update-item="updateItem"
+            @remove-item="removeItem"/>
 
         <div class="mt-2 d-flex justify-end">
             <v-btn @click="receiptDialog = true">bon speichern</v-btn>
         </div>
 
-        <ItemSelector :open="itemDialog" @close="itemDialog = false" @update="loadItems"/>
-        <ReceiptDialog :open="receiptDialog" @close="receiptDialog = false"/>
+        <ItemSelector v-model="itemDialog" @add-to-list="addToList" @add-new-item="addNewItem"/>
+        <ReceiptDialog v-model="receiptDialog" @update="loadItems"/>
     </div>
 </template>
 
 <script setup>
-    /**
-     * {
-     *   name: ".."
-     *   priceEstimate: >0,
-     *   amount: >0,
-     *   cart: false,
-     *   category: ".."
-     * }
-     */
+
     import { ref, computed, onMounted } from 'vue';
     import ItemSelector from '@/components/ItemSelector.vue';
     import ItemList from './ItemList.vue';
@@ -61,14 +55,26 @@
     })
 
     function loadItems() {
-        loader.get("/shopping")
+        loader.get("/shopping_list")
             .then(data => app.setShoppingListItems(data))
     }
+    function updateItem(item) {
+        loader.post("/shopping_item", item)
+    }
     function removeItem(item) {
-        loader.post("/delete/shopping", null, { id: item.id })
-            .then(response => {
-                app.removeItemFromShoppingList(item.id)
+        loader.post("/delete/shopping_item", null, { id: item.id })
+            .then(() => app.removeItemFromShoppingList(item.id))
+    }
+    function addToList(items) {
+        loader.post("/shopping_list", { items: items })
+            .then(() => loadItems())
+    }
+    function addNewItem(item) {
+        loader.post("/product", null, { name: item.name, category: item.category })
+            .then(() => {
+                loader.get("/products_list").then(prods => app.products = prods);
             })
+
     }
 
     // TODO

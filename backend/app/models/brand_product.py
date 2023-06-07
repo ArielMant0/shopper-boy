@@ -15,6 +15,3 @@ class BrandProduct(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey(Product.id, ondelete="CASCADE"))
 
     product = db.relationship("Product", backref="brand_products")
-
-    _receipt_items = db.relationship("ReceiptItem", backref="brand_products")
-    _shopping_items = db.relationship("ShoppingItem", backref="brand_products")

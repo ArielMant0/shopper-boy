@@ -13,5 +13,3 @@ class Receipt(db.Model):
     expense_id = db.Column(db.Integer, db.ForeignKey(Expense.id, ondelete='CASCADE'))
 
     expense = db.relationship("Expense", backref="receipts")
-
-    _receipt_items = db.relationship("ReceiptItem", backref="receipts", cascade="all, delete")

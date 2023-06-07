@@ -3,6 +3,8 @@ node_modules
 /dist
 .yarn
 
+*.db
+
 # local env files
 .env.local
 .env.*.local

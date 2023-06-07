@@ -7,10 +7,11 @@ class ShoppingItem(db.Model):
     __tablename__ = "shopping_items"
 
     id = db.Column(db.Integer, primary_key=True)
-    unit = db.Column(db.String(15), default="pp")
+    unit = db.Column(db.String(15), default="Stk")
     amount = db.Column(db.Float, default=1.0)
     price = db.Column(db.Float, default=0.0)
     currency = db.Column(CurrencyType, default="EUR")
+    cart = db.Column(db.Boolean, default=True)
 
     product_id = db.Column(db.Integer, db.ForeignKey(Product.id), nullable=True)
     brand_product_id = db.Column(db.Integer, db.ForeignKey(BrandProduct.id), nullable=True)
